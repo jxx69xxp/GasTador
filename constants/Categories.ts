@@ -1,4 +1,4 @@
-// Default seed categories for GasTador
+// Default seed categories for MeowMeow
 
 export const DEFAULT_EXPENSE_CATEGORIES = [
   { name: 'Food & Dining', icon: '🍽️', color: '#E53935' },

@@ -1,5 +1,5 @@
 /**
- * GasTador — Add Transaction Modal
+ * MeowMeow — Add Transaction Modal
  * Handles income, expense, and transfer
  */
 

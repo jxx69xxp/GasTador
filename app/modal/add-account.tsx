@@ -1,5 +1,5 @@
 /**
- * GasTador — Add Account Modal
+ * MeowMeow — Add Account Modal
  */
 
 import { router } from 'expo-router';

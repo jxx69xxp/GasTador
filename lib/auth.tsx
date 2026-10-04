@@ -1,5 +1,5 @@
 /**
- * GasTador — Supabase Auth session context.
+ * MeowMeow — Supabase Auth session context.
  * Env: EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_KEY (publishable key, safe to ship in the app)
  */
 import 'react-native-url-polyfill/auto';

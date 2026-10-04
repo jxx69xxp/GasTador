@@ -1,5 +1,5 @@
 /**
- * GasTador — Dashboard Screen
+ * MeowMeow — Dashboard Screen
  * Shows: Net worth card, today/month summary, quick-add FAB, recent transactions
  */
 

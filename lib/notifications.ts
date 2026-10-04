@@ -1,5 +1,5 @@
 /**
- * GasTador — Local notifications (no push server): daily log reminder + budget alerts.
+ * MeowMeow — Local notifications (no push server): daily log reminder + budget alerts.
  */
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
@@ -18,7 +18,7 @@ export async function setupDailyReminder(hour = 20) {
   if (!granted) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
   await Notifications.scheduleNotificationAsync({
-    content: { title: 'GasTador', body: 'Spent anything today? Log it before you forget.' },
+    content: { title: 'MeowMeow', body: 'Spent anything today? Log it before you forget.' },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute: 0 },
   });
 }

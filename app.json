@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GasTador",
+    "name": "MeowMeow",
     "slug": "gastador",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1E40AF"
+        "backgroundColor": "#0F766E"
       },
       "package": "com.gastador.app"
     },
@@ -35,9 +35,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
+          "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#1E40AF"
+          "backgroundColor": "#0F766E"
         }
       ]
     ],

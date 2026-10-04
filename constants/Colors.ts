@@ -1,17 +1,20 @@
-// GasTador Color Palette
-// Trust blue + profit green (ui-ux-pro-max "Personal Finance Tracker" palette, tuned to WCAG AA on light)
+// MeowMeow Color Palette
+// Caring teal + warm tangerine on cream (ui-ux-pro-max "caring teal + warm orange", tuned to WCAG AA)
 
 export const Colors = {
-  primary: '#1E40AF',       // Trust blue (8.7:1 with white)
-  primaryLight: '#3B82F6',  // Bright blue
-  primaryDark: '#1E3A8A',   // Deep navy
-  primaryBg: '#EFF6FF',     // Soft blue bg
+  primary: '#0F766E',       // Deep teal (5.5:1 with white)
+  primaryLight: '#2DD4BF',  // Bright teal
+  primaryDark: '#115E59',   // Darkest teal
+  primaryBg: '#F0FDFA',     // Soft mint bg
 
   income: '#047857',        // Green for money in
   expense: '#DC2626',       // Red for money out
   transfer: '#2563EB',      // Blue for transfers
 
   gold: '#E6A817',          // Accent / highlight
+  accent: '#C2410C',        // Tangerine, AA as text on cream (4.9:1)
+  cream: '#FFF7ED',         // Login / brand background
+  ink: '#1F2937',           // Mascot outline / headings
   white: '#FFFFFF',
   offWhite: '#F8FAFC',
   border: '#E2E8F0',

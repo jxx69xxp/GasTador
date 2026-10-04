@@ -1,5 +1,5 @@
 /**
- * GasTador — Accounts Screen
+ * MeowMeow — Accounts Screen
  */
 
 import { router } from 'expo-router';

@@ -1,5 +1,5 @@
 /**
- * GasTador — Transactions Screen
+ * MeowMeow — Transactions Screen
  * Shows full transaction log with filter by type and delete on long-press
  */
 

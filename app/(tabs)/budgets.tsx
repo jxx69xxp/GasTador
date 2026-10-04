@@ -1,5 +1,5 @@
 /**
- * GasTador — Budgets Screen
+ * MeowMeow — Budgets Screen
  * Monthly budget limits per category with visual progress bars
  */
 

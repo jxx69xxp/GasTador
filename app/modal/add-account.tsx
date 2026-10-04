@@ -3,7 +3,7 @@
  */
 
 import { router } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDb } from '../../lib/db/DbContext';
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
@@ -34,7 +34,7 @@ const PALETTE = [
 ];
 
 export default function AddAccountModal() {
-  const db = useSQLiteContext();
+  const db = useDb();
   const [name, setName] = useState('');
   const [type, setType] = useState<Account['type']>('cash');
   const [balance, setBalance] = useState('0');

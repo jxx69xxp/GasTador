@@ -4,7 +4,7 @@
  */
 
 import { router } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDb } from '../../lib/db/DbContext';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -29,7 +29,7 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 
 export default function TransactionsScreen() {
-  const db = useSQLiteContext();
+  const db = useDb();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
@@ -118,6 +118,8 @@ export default function TransactionsScreen() {
         style={styles.fab}
         onPress={() => router.push('/modal/add-transaction')}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Add transaction"
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>

@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#0A4D2C"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gastador.app"
@@ -19,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0D3B26"
+        "backgroundColor": "#1E40AF"
       },
       "package": "com.gastador.app"
     },
@@ -34,6 +29,15 @@
         "expo-sqlite",
         {
           "enableFTS": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#1E40AF"
         }
       ]
     ],

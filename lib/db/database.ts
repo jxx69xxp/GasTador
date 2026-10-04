@@ -5,7 +5,7 @@
  * Schema version: 1
  */
 
-import * as SQLite from 'expo-sqlite';
+import type { DbAdapter } from './DbAdapter';
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '../../constants/Categories';
 
 export const DB_NAME = 'gastador.db';
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS db_meta (
 
 // ─── Seeder ──────────────────────────────────────────────────────────────────
 
-async function seedDefaultData(db: SQLite.SQLiteDatabase): Promise<void> {
+async function seedDefaultData(db: DbAdapter): Promise<void> {
   const alreadySeeded = await db.getFirstAsync<{ value: string }>(
     `SELECT value FROM db_meta WHERE key = 'seeded'`
   );
@@ -126,7 +126,7 @@ async function seedDefaultData(db: SQLite.SQLiteDatabase): Promise<void> {
 
 // ─── Init — called by SQLiteProvider's onInit ─────────────────────────────────
 
-export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
+export async function initDatabase(db: DbAdapter): Promise<void> {
   await db.execAsync(DDL);
   await seedDefaultData(db);
 }

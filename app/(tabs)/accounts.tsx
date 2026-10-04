@@ -3,7 +3,7 @@
  */
 
 import { router } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDb } from '../../lib/db/DbContext';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -21,7 +21,7 @@ import { deleteAccount, getAccounts, getActiveProfile, getNetWorth } from '../..
 import type { Account, NetWorth, Profile } from '../../lib/types';
 
 export default function AccountsScreen() {
-  const db = useSQLiteContext();
+  const db = useDb();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [netWorth, setNetWorth] = useState<NetWorth>({ assets: 0, liabilities: 0, net: 0 });
@@ -136,6 +136,8 @@ export default function AccountsScreen() {
         style={styles.fab}
         onPress={() => router.push('/modal/add-account')}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Add account"
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>

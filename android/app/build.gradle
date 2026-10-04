@@ -101,15 +101,23 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // Production upload key. Values live in ~/.gradle/gradle.properties (never in the repo).
+        if (project.hasProperty('MEOWMEOW_UPLOAD_STORE_FILE')) {
+            release {
+                storeFile file(MEOWMEOW_UPLOAD_STORE_FILE)
+                storePassword MEOWMEOW_UPLOAD_STORE_PASSWORD
+                keyAlias MEOWMEOW_UPLOAD_KEY_ALIAS
+                keyPassword MEOWMEOW_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Signed with the upload key when configured; falls back to debug so CI/dev builds still work.
+            signingConfig project.hasProperty('MEOWMEOW_UPLOAD_STORE_FILE') ? signingConfigs.release : signingConfigs.debug
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"

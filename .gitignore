@@ -11,3 +11,6 @@ expo-env.d.ts
 node_modules/
 dist/
 *.apk
+*.keystore
+!android/app/debug.keystore
+*.jks

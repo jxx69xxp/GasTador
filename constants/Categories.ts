@@ -1,4 +1,4 @@
-// Default seed categories for MeowMeow
+// Default seed categories for Paws
 
 export const DEFAULT_EXPENSE_CATEGORIES = [
   { name: 'Food & Dining', icon: '🍽️', color: '#E53935' },

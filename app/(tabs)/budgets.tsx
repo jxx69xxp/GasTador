@@ -1,47 +1,41 @@
 /**
- * MeowMeow — Budgets Screen
- * Monthly budget limits per category with visual progress bars
+ * Paws — Budgets Screen
+ * Monthly overview, a tip from Paws, and per-category progress bars.
  */
-
-import { router } from 'expo-router';
-import { useDb } from '../../lib/db/DbContext';
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BudgetBar } from '../../components/BudgetBar';
+import { CatTip, EmptyState, Fab, ScreenHeader, ui } from '../../components/ui';
 import Colors from '../../constants/Colors';
-import { deleteBudget, getActiveProfile, getBudgets, getMonthlySummary } from '../../lib/db/queries';
-import type { Budget, DailySummary, Profile } from '../../lib/types';
+import { useDb } from '../../lib/db/DbContext';
+import { deleteBudget, getActiveProfile, getBudgets } from '../../lib/db/queries';
+import type { Budget } from '../../lib/types';
 
-const NOW = new Date();
+const peso = (n: number) => `₱${Math.round(n).toLocaleString('en-PH')}`;
+
+function budgetTip(budgets: Budget[]) {
+  if (budgets.length === 0) return 'Set a monthly limit for a category and I’ll warn you before you go over.';
+  const over = budgets.filter(b => (b.spent ?? 0) > b.amount);
+  if (over.length) return `${over[0].category_name} is over budget by ${peso((over[0].spent ?? 0) - over[0].amount)}. Paws before you spend!`;
+  const near = budgets.find(b => b.amount > 0 && (b.spent ?? 0) / b.amount >= 0.8);
+  if (near) return `Careful, ${near.category_name} is at ${Math.round(((near.spent ?? 0) / near.amount) * 100)}% of its budget.`;
+  return 'Everything is within budget. Purr-fect!';
+}
 
 export default function BudgetsScreen() {
   const db = useDb();
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [monthSummary, setMonthSummary] = useState<DailySummary>({ income: 0, expenses: 0, net: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const p = await getActiveProfile(db);
     if (!p) return;
-    setProfile(p);
-    const [buds, summary] = await Promise.all([
-      getBudgets(db, p.id, NOW.getFullYear(), NOW.getMonth() + 1),
-      getMonthlySummary(db, p.id, NOW.getFullYear(), NOW.getMonth() + 1),
-    ]);
-    setBudgets(buds);
-    setMonthSummary(summary);
+    const now = new Date();
+    setBudgets(await getBudgets(db, p.id, now.getFullYear(), now.getMonth() + 1));
   }, [db]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -52,111 +46,63 @@ export default function BudgetsScreen() {
   const handleDeleteBudget = useCallback((budget: Budget) => {
     Alert.alert('Remove Budget', `Remove budget for "${budget.category_name}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove', style: 'destructive',
-        onPress: async () => { await deleteBudget(db, budget.id); load(); },
-      },
+      { text: 'Remove', style: 'destructive', onPress: async () => { await deleteBudget(db, budget.id); load(); } },
     ]);
   }, [db, load]);
 
-  const totalBudget = budgets.reduce((s, b) => s + b.amount, 0);
-  const totalSpent = budgets.reduce((s, b) => s + (b.spent ?? 0), 0);
-  const monthName = NOW.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const total = budgets.reduce((s, b) => s + b.amount, 0);
+  const spent = budgets.reduce((s, b) => s + (b.spent ?? 0), 0);
+  const pct = total > 0 ? Math.min(100, Math.round((spent / total) * 100)) : 0;
+  const monthName = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <View style={styles.screen}>
+    <View style={ui.screen}>
+      <ScreenHeader title="Budgets" subtitle={monthName} />
       <ScrollView
-        contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        contentContainerStyle={ui.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Month Overview */}
-        <View style={styles.overview}>
-          <Text style={styles.overviewMonth}>{monthName}</Text>
-          <View style={styles.overviewRow}>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Total Budget</Text>
-              <Text style={styles.overviewValue}>₱{totalBudget.toLocaleString('en-PH', { minimumFractionDigits: 0 })}</Text>
-            </View>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Spent</Text>
-              <Text style={[styles.overviewValue, { color: Colors.expense }]}>
-                ₱{totalSpent.toLocaleString('en-PH', { minimumFractionDigits: 0 })}
-              </Text>
-            </View>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Remaining</Text>
-              <Text style={[styles.overviewValue, { color: Colors.income }]}>
-                ₱{Math.max(0, totalBudget - totalSpent).toLocaleString('en-PH', { minimumFractionDigits: 0 })}
-              </Text>
-            </View>
+        <View style={ui.card}>
+          <Text style={ui.label}>REMAINING THIS MONTH</Text>
+          <Text style={styles.big}>{peso(Math.max(0, total - spent))}</Text>
+          <View style={styles.track}>
+            <View style={[styles.fill, { width: `${pct}%`, backgroundColor: spent > total ? Colors.expense : Colors.primary }]} />
+          </View>
+          <View style={styles.split}>
+            <Text style={styles.splitText}>{peso(spent)} spent</Text>
+            <Text style={styles.splitText}>of {peso(total)} budget</Text>
           </View>
         </View>
 
-        <View style={styles.content}>
-          {budgets.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>🎯</Text>
-              <Text style={styles.emptyText}>No budgets set yet.{'\n'}Tap + to set a category budget.</Text>
-            </View>
-          ) : (
-            budgets.map(b => (
-              <TouchableOpacity key={b.id} onLongPress={() => handleDeleteBudget(b)} activeOpacity={0.9}>
-                <BudgetBar budget={b} />
-              </TouchableOpacity>
-            ))
-          )}
+        <CatTip text={budgetTip(budgets)} />
 
-          <View style={{ height: 100 }} />
-        </View>
+        <Text style={ui.section}>CATEGORIES</Text>
+        {budgets.length === 0 ? (
+          <EmptyState icon="pie-chart-outline" text={'No budgets yet.\nTap “+ Budget” to set one.'} />
+        ) : (
+          budgets.map(b => (
+            <TouchableOpacity
+              key={b.id}
+              onLongPress={() => handleDeleteBudget(b)}
+              activeOpacity={0.9}
+              accessibilityHint="Long press to remove this budget"
+            >
+              <BudgetBar budget={b} />
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/modal/add-budget')}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        accessibilityLabel="Set budget"
-      >
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+      <Fab label="Budget" onPress={() => router.push('/modal/add-budget')} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.screenBg },
-  scroll: { flexGrow: 1 },
-  overview: {
-    backgroundColor: Colors.primary,
-    paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-  },
-  overviewMonth: { color: Colors.white + 'AA', fontSize: 13, fontWeight: '600', marginBottom: 12 },
-  overviewRow: { flexDirection: 'row', gap: 8 },
-  overviewItem: { flex: 1 },
-  overviewLabel: { color: Colors.white + 'AA', fontSize: 11, marginBottom: 4 },
-  overviewValue: { color: Colors.white, fontSize: 16, fontWeight: '700' },
-  content: { padding: 16 },
-  empty: { alignItems: 'center', paddingVertical: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-  fab: {
-    position: 'absolute',
-    bottom: 80,
-    right: 20,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  fabIcon: { fontSize: 28, color: Colors.white, lineHeight: 30 },
+  big: { fontSize: 32, fontWeight: '800', color: Colors.textPrimary, marginTop: 4 },
+  track: { height: 10, borderRadius: 5, backgroundColor: Colors.border, overflow: 'hidden', marginTop: 12 },
+  fill: { height: '100%', borderRadius: 5 },
+  split: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  splitText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
 });

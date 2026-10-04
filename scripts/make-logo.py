@@ -1,5 +1,5 @@
 """
-MeowMeow brand generator — regenerates the cat mascot, app icons, splash and hero art from code.
+Paws brand generator — regenerates the cat mascot, app icons, splash and hero art from code.
 Run: python3 scripts/make-logo.py   (needs Pillow)
 """
 from PIL import Image, ImageDraw

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Colors from '../constants/Colors';
 import type { Budget } from '../lib/types';
+import { shadow } from './ui';
 
 interface Props {
   budget: Budget;
@@ -46,21 +47,11 @@ export function BudgetBar({ budget }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
+  card: { backgroundColor: Colors.cardBg, borderRadius: 18, padding: 16, marginTop: 10, ...shadow },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   leftRow: { flexDirection: 'row', alignItems: 'center' },
   icon: { fontSize: 18, marginRight: 8 },
-  name: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  name: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   pct: { fontSize: 13, fontWeight: '700' },
   track: {
     height: 8,
@@ -71,6 +62,6 @@ const styles = StyleSheet.create({
   },
   fill: { height: '100%', borderRadius: 4 },
   footer: { flexDirection: 'row', justifyContent: 'space-between' },
-  spent: { fontSize: 12, color: Colors.textSecondary },
-  remaining: { fontSize: 12, fontWeight: '600' },
+  spent: { fontSize: 13, color: Colors.textSecondary },
+  remaining: { fontSize: 13, fontWeight: '600' },
 });

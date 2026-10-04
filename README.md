@@ -1,4 +1,4 @@
-# MeowMeow 🐱
+# Paws 🐾
 
 > *Paws before you spend.*
 

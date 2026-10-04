@@ -1,10 +1,10 @@
 /**
- * GasTador — Add Transaction Modal
+ * MeowMeow — Add Transaction Modal
  * Handles income, expense, and transfer
  */
 
 import { router } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDb } from '../../lib/db/DbContext';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -18,7 +18,8 @@ import {
   View,
 } from 'react-native';
 import Colors from '../../constants/Colors';
-import { getAccounts, getActiveProfile, getCategories, postTransaction } from '../../lib/db/queries';
+import { getAccounts, getActiveProfile, getBudgets, getCategories, postTransaction } from '../../lib/db/queries';
+import { notifyBudget } from '../../lib/notifications';
 import type { Account, Category, TransactionType } from '../../lib/types';
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -30,7 +31,7 @@ const TYPE_OPTIONS: { id: TransactionType; label: string; color: string }[] = [
 ];
 
 export default function AddTransactionModal() {
-  const db = useSQLiteContext();
+  const db = useDb();
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
@@ -93,6 +94,11 @@ export default function AddTransactionModal() {
         memo: memo.trim(),
         date,
       });
+      if (type === 'expense' && selectedCategory) {
+        const [y, m] = date.split('-').map(Number);
+        const b = (await getBudgets(db, p.id, y, m)).find(b => b.category_id === selectedCategory);
+        if (b) notifyBudget(b.category_name ?? 'Budget', b.spent ?? 0, b.amount, amt).catch(() => {});
+      }
       router.back();
     } catch (e) {
       Alert.alert('Error', String(e));

@@ -1,10 +1,10 @@
 /**
- * GasTador — Add / Edit Budget Modal
+ * MeowMeow — Add / Edit Budget Modal
  * Set a monthly spend limit for an expense category
  */
 
 import { router } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDb } from '../../lib/db/DbContext';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -24,7 +24,7 @@ import type { Category } from '../../lib/types';
 const NOW = new Date();
 
 export default function AddBudgetModal() {
-  const db = useSQLiteContext();
+  const db = useDb();
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [amount, setAmount] = useState('');

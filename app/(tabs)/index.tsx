@@ -1,10 +1,10 @@
 /**
- * GasTador — Dashboard Screen
+ * MeowMeow — Dashboard Screen
  * Shows: Net worth card, today/month summary, quick-add FAB, recent transactions
  */
 
 import { router } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDb } from '../../lib/db/DbContext';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -32,7 +32,7 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const NOW = new Date();
 
 export default function DashboardScreen() {
-  const db = useSQLiteContext();
+  const db = useDb();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [netWorth, setNetWorth] = useState<NetWorth>({ assets: 0, liabilities: 0, net: 0 });
   const [todaySummary, setTodaySummary] = useState<DailySummary>({ income: 0, expenses: 0, net: 0 });
@@ -147,6 +147,8 @@ export default function DashboardScreen() {
         style={styles.fab}
         onPress={() => router.push('/modal/add-transaction')}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Add transaction"
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>

@@ -4,7 +4,9 @@
  * Balance rule: posting a transaction immediately updates the linked account balance.
  */
 
-import * as SQLite from 'expo-sqlite';
+import type { DbAdapter as SQLite } from './DbAdapter';
+// Re-export as SQLite type alias so all function signatures below are unchanged
+type SQLiteDatabase = SQLite;
 import type {
   Account, Budget, Category, DailySummary,
   NetWorth, Profile, Transaction, TransactionType,
@@ -16,13 +18,13 @@ function fmt(n: number) { return Math.round(n * 100) / 100; }
 
 // ─── Profiles ────────────────────────────────────────────────────────────────
 
-export async function getActiveProfile(db: SQLite.SQLiteDatabase): Promise<Profile | null> {
+export async function getActiveProfile(db: SQLiteDatabase): Promise<Profile | null> {
   return db.getFirstAsync<Profile>(`SELECT * FROM profiles WHERE is_active = 1 LIMIT 1`);
 }
 
 // ─── Accounts ────────────────────────────────────────────────────────────────
 
-export async function getAccounts(db: SQLite.SQLiteDatabase, profileId: number): Promise<Account[]> {
+export async function getAccounts(db: SQLiteDatabase, profileId: number): Promise<Account[]> {
   return db.getAllAsync<Account>(
     `SELECT * FROM accounts WHERE profile_id = ? ORDER BY created_at ASC`,
     profileId
@@ -30,7 +32,7 @@ export async function getAccounts(db: SQLite.SQLiteDatabase, profileId: number):
 }
 
 export async function createAccount(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   profileId: number,
   data: { name: string; type: Account['type']; balance: number; color: string; icon: string }
 ): Promise<number> {
@@ -42,7 +44,7 @@ export async function createAccount(
 }
 
 export async function updateAccountBalance(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   accountId: number,
   delta: number
 ): Promise<void> {
@@ -52,11 +54,11 @@ export async function updateAccountBalance(
   );
 }
 
-export async function deleteAccount(db: SQLite.SQLiteDatabase, accountId: number): Promise<void> {
+export async function deleteAccount(db: SQLiteDatabase, accountId: number): Promise<void> {
   await db.runAsync(`DELETE FROM accounts WHERE id = ?`, accountId);
 }
 
-export async function getNetWorth(db: SQLite.SQLiteDatabase, profileId: number): Promise<NetWorth> {
+export async function getNetWorth(db: SQLiteDatabase, profileId: number): Promise<NetWorth> {
   const rows = await db.getAllAsync<{ type: string; balance: number }>(
     `SELECT type, balance FROM accounts WHERE profile_id = ? AND include_in_net_worth = 1`,
     profileId
@@ -75,7 +77,7 @@ export async function getNetWorth(db: SQLite.SQLiteDatabase, profileId: number):
 // ─── Categories ──────────────────────────────────────────────────────────────
 
 export async function getCategories(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   profileId: number,
   type?: 'income' | 'expense'
 ): Promise<Category[]> {
@@ -94,7 +96,7 @@ export async function getCategories(
 // ─── Transactions ─────────────────────────────────────────────────────────────
 
 export async function getTransactions(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   profileId: number,
   limit = 50,
   offset = 0
@@ -120,7 +122,7 @@ export async function getTransactions(
 }
 
 export async function getTransactionsByDateRange(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   profileId: number,
   startDate: string,
   endDate: string
@@ -143,7 +145,7 @@ export async function getTransactionsByDateRange(
 }
 
 export async function getDailySummary(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   profileId: number,
   date: string
 ): Promise<DailySummary> {
@@ -161,7 +163,7 @@ export async function getDailySummary(
 }
 
 export async function getMonthlySummary(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   profileId: number,
   year: number,
   month: number
@@ -186,7 +188,7 @@ export async function getMonthlySummary(
  * This is the core write in GasTador — single atomic SQLite transaction.
  */
 export async function postTransaction(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   profileId: number,
   data: {
     account_id: number;
@@ -241,7 +243,7 @@ export async function postTransaction(
 }
 
 export async function deleteTransaction(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   txnId: number
 ): Promise<void> {
   // Reverse balance effect before deleting
@@ -278,7 +280,7 @@ export async function deleteTransaction(
 // ─── Budgets ─────────────────────────────────────────────────────────────────
 
 export async function getBudgets(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   profileId: number,
   year: number,
   month: number
@@ -316,7 +318,7 @@ export async function getBudgets(
 }
 
 export async function upsertBudget(
-  db: SQLite.SQLiteDatabase,
+  db: SQLiteDatabase,
   profileId: number,
   categoryId: number,
   amount: number,
@@ -333,6 +335,6 @@ export async function upsertBudget(
   );
 }
 
-export async function deleteBudget(db: SQLite.SQLiteDatabase, budgetId: number): Promise<void> {
+export async function deleteBudget(db: SQLiteDatabase, budgetId: number): Promise<void> {
   await db.runAsync(`DELETE FROM budgets WHERE id = ?`, budgetId);
 }

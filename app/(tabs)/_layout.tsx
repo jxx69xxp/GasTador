@@ -1,15 +1,28 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Text } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Redirect, Tabs } from 'expo-router';
+import React, { useEffect } from 'react';
+import { TouchableOpacity } from 'react-native';
 import Colors from '../../constants/Colors';
+import { useAuth } from '../../lib/auth';
+import { cancelReminders, setupDailyReminder } from '../../lib/notifications';
 
-function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
-  return (
-    <Text style={{ fontSize: focused ? 24 : 20, opacity: focused ? 1 : 0.6 }}>{emoji}</Text>
-  );
-}
+type IconName = keyof typeof Ionicons.glyphMap;
+
+// Filled when active, outline when inactive; tint comes from tabBarActive/InactiveTintColor
+const tabIcon = (name: string) => ({ focused, color, size }: { focused: boolean; color: string; size: number }) => (
+  <Ionicons name={(focused ? name : `${name}-outline`) as IconName} size={size} color={color} />
+);
 
 export default function TabLayout() {
+  const { session, signOut } = useAuth();
+
+  useEffect(() => {
+    if (session) setupDailyReminder().catch(() => {});
+  }, [session]);
+
+  if (session === undefined) return null;
+  if (!session) return <Redirect href="/login" />;
+
   return (
     <Tabs
       screenOptions={{
@@ -18,8 +31,6 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: Colors.white,
           borderTopColor: Colors.border,
-          height: 62,
-          paddingBottom: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -28,6 +39,16 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: Colors.primary },
         headerTintColor: Colors.white,
         headerTitleStyle: { fontWeight: '700', fontSize: 18 },
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => { cancelReminders(); signOut(); }}
+            style={{ marginRight: 8, padding: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
+          >
+            <Ionicons name="log-out-outline" size={24} color={Colors.white} />
+          </TouchableOpacity>
+        ),
       }}
     >
       <Tabs.Screen
@@ -35,7 +56,7 @@ export default function TabLayout() {
         options={{
           title: 'Dashboard',
           tabBarLabel: 'Home',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" label="Home" focused={focused} />,
+          tabBarIcon: tabIcon('home'),
         }}
       />
       <Tabs.Screen
@@ -43,7 +64,7 @@ export default function TabLayout() {
         options={{
           title: 'Accounts',
           tabBarLabel: 'Accounts',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="💳" label="Accounts" focused={focused} />,
+          tabBarIcon: tabIcon('wallet'),
         }}
       />
       <Tabs.Screen
@@ -51,7 +72,7 @@ export default function TabLayout() {
         options={{
           title: 'Transactions',
           tabBarLabel: 'Log',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" label="Log" focused={focused} />,
+          tabBarIcon: tabIcon('list'),
         }}
       />
       <Tabs.Screen
@@ -59,7 +80,7 @@ export default function TabLayout() {
         options={{
           title: 'Budgets',
           tabBarLabel: 'Budgets',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🎯" label="Budgets" focused={focused} />,
+          tabBarIcon: tabIcon('pie-chart'),
         }}
       />
     </Tabs>

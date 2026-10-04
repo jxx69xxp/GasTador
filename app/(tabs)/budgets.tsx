@@ -1,10 +1,10 @@
 /**
- * GasTador — Budgets Screen
+ * MeowMeow — Budgets Screen
  * Monthly budget limits per category with visual progress bars
  */
 
 import { router } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDb } from '../../lib/db/DbContext';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -23,7 +23,7 @@ import type { Budget, DailySummary, Profile } from '../../lib/types';
 const NOW = new Date();
 
 export default function BudgetsScreen() {
-  const db = useSQLiteContext();
+  const db = useDb();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [monthSummary, setMonthSummary] = useState<DailySummary>({ income: 0, expenses: 0, net: 0 });
@@ -115,6 +115,8 @@ export default function BudgetsScreen() {
         style={styles.fab}
         onPress={() => router.push('/modal/add-budget')}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Set budget"
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>

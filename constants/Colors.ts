@@ -1,25 +1,27 @@
-// GasTador Color Palette
-// Primary: Deep Forest Green (money + Philippine nature motif)
+// MeowMeow Color Palette
+// Playful fintech: bright blue actions + coral/purple/sky brand gradient (WCAG AA on light)
 
 export const Colors = {
-  primary: '#0D6B3E',       // Deep forest green
-  primaryLight: '#14A05C',  // Bright green
-  primaryDark: '#0A4E2D',   // Darker shade
-  primaryBg: '#E8F5EF',     // Soft green bg
+  primary: '#2563EB',       // Bright blue (5.2:1 with white)
+  primaryLight: '#3B82F6',  // Bright blue
+  primaryDark: '#1E40AF',   // Deep blue
+  primaryBg: '#EFF6FF',     // Soft blue bg
 
-  income: '#1B8A4E',        // Green for money in
-  expense: '#D13A3A',       // Red for money out
-  transfer: '#2979B4',      // Blue for transfers
+  income: '#047857',        // Green for money in
+  expense: '#DC2626',       // Red for money out
+  transfer: '#2563EB',      // Blue for transfers
 
   gold: '#E6A817',          // Accent / highlight
+  brandPurple: '#A78BFA',   // Gradient mid-stop, splash bg
+  ink: '#1F2937',           // Mascot outline / headings
   white: '#FFFFFF',
-  offWhite: '#F7F9F8',
-  border: '#E2E8E4',
-  textPrimary: '#0F1F18',
-  textSecondary: '#5C7368',
-  textMuted: '#9DB3AC',
+  offWhite: '#F8FAFC',
+  border: '#E2E8F0',
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#64748B',    // 4.55:1 on screenBg
   cardBg: '#FFFFFF',
-  screenBg: '#F0F5F2',
+  screenBg: '#F8FAFC',
 
   // Account type colors
   cash: '#4CAF50',

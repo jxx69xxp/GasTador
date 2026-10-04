@@ -18,7 +18,9 @@ import {
   deleteTransaction, getActiveProfile, getMonthlySummary, getTransactions, getTransactionsByDateRange,
 } from '../../lib/db/queries';
 import { daysUntilPayday } from '../../lib/paydayDates';
+import { monthEndProjection } from '../../lib/projection';
 import type { DailySummary, Transaction } from '../../lib/types';
+import { themed } from '../../components/theme';
 
 const iso = (d: Date) => d.toISOString().slice(0, 10); // same date convention as the rest of the app
 
@@ -186,6 +188,18 @@ export default function DashboardScreen() {
           )}
         </TouchableOpacity>
 
+        {/* ── Projection ── */}
+        <TouchableOpacity style={styles.monthCard} onPress={() => router.push('/plan')} accessibilityRole="button" accessibilityHint="Opens your spending and debt plan">
+          <View style={styles.monthIcon}>
+            <Ionicons name="trending-up-outline" size={20} color={Colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.cardLabel, { color: Colors.primary }]}>PROJECTED SPENDING THIS MONTH</Text>
+            <AmountText amount={monthEndProjection(month.expenses, now.getDate(), new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())} style={styles.monthAmount} />
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
+        </TouchableOpacity>
+
         {/* ── Month balance ── */}
         <TouchableOpacity style={styles.monthCard} onPress={() => router.push('/(tabs)/budgets')} accessibilityRole="button">
           <View style={styles.monthIcon}>
@@ -239,14 +253,14 @@ function IconPill({ icon, label, showLabel, onPress }: {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.screenBg },
   scroll: { paddingHorizontal: 18 },
 
   greetRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, minWidth: 44, justifyContent: 'center',
-    paddingHorizontal: 12, borderRadius: 22, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border,
+    paddingHorizontal: 12, borderRadius: 22, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
   },
   pillText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
 
@@ -256,7 +270,7 @@ const styles = StyleSheet.create({
 
 
   row: { flexDirection: 'row', gap: 12, marginTop: 14 },
-  card: { backgroundColor: Colors.white, borderRadius: 18, padding: 14, minHeight: 132, ...shadow },
+  card: { backgroundColor: Colors.surface, borderRadius: 18, padding: 14, minHeight: 132, ...shadow },
   cardLabel: { fontSize: 11, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8 },
   bigAmount: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary },
 
@@ -268,7 +282,7 @@ const styles = StyleSheet.create({
 
   paydayCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, padding: 14, borderRadius: 18,
-    backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0',
+    backgroundColor: Colors.successBg, borderWidth: 1, borderColor: Colors.successBorder,
   },
   paydayDays: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 },
   paydayDate: { fontSize: 15, fontWeight: '800', color: Colors.income },
@@ -278,15 +292,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryBg, borderWidth: 1, borderColor: Colors.primaryLight + '40',
   },
   monthIcon: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center',
   },
   monthAmount: { fontSize: 20, fontWeight: '800', marginTop: 2 },
   small: { fontSize: 13, fontWeight: '700' },
 
-  listCard: { marginTop: 14, padding: 14, borderRadius: 18, backgroundColor: Colors.white, ...shadow },
+  listCard: { marginTop: 14, padding: 14, borderRadius: 18, backgroundColor: Colors.surface, ...shadow },
   listHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
   listTitle: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
   listSub: { fontSize: 13, color: Colors.textSecondary },
   seeAll: { color: Colors.primary, fontSize: 14, fontWeight: '700', padding: 10 },
 
-});
+}));

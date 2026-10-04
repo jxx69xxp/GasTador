@@ -6,7 +6,7 @@ import {
   ActivityIndicator, DimensionValue, Image, ImageBackground, KeyboardAvoidingView, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
-import Colors from '../constants/Colors';
+import { light as Colors } from '../constants/Colors'; // login art is light-only
 import { useAuth } from '../lib/auth';
 
 type Mode = 'login' | 'signup';

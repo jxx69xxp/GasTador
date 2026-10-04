@@ -12,6 +12,7 @@ import Colors from '../../constants/Colors';
 import { useDb } from '../../lib/db/DbContext';
 import { deleteAccount, getAccounts, getActiveProfile, getNetWorth } from '../../lib/db/queries';
 import type { Account, NetWorth } from '../../lib/types';
+import { themed } from '../../components/theme';
 
 const TYPE_LABEL: Record<string, string> = {
   cash: 'Cash', bank: 'Bank accounts', credit_card: 'Credit cards', loan: 'Loans', investment: 'Investments',
@@ -22,8 +23,8 @@ const peso = (n: number) => `₱${Math.round(n).toLocaleString('en-PH')}`;
 function accountsTip(accounts: Account[], nw: NetWorth) {
   if (accounts.length === 0) return 'Add your wallets and bank accounts so I can keep track of every peso.';
   if (nw.liabilities > 0) return `You owe ${peso(nw.liabilities)} on credit and loans. Paying it down is a purr-fect move.`;
-  const top = [...accounts].sort((a, b) => b.balance - a.balance)[0];
-  return top.balance > 0
+  const top = accounts.filter(a => a.type !== 'loan' && a.type !== 'credit_card').sort((a, b) => b.balance - a.balance)[0];
+  return top && top.balance > 0
     ? `Most of your money is in ${top.name} (${peso(top.balance)}). Keep it growing!`
     : 'Your balances are empty for now. Log some income to get started.';
 }
@@ -65,7 +66,12 @@ export default function AccountsScreen() {
       <ScreenHeader
         title="Accounts"
         subtitle="Your wallets and balances"
-        right={<PillButton icon="add" label="Add" solid onPress={() => router.push('/modal/add-account')} />}
+        right={
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <PillButton icon="trending-down-outline" label="Plan" onPress={() => router.push('/plan')} />
+            <PillButton icon="add" label="Add" solid onPress={() => router.push('/modal/add-account')} />
+          </View>
+        }
       />
       <ScrollView
         contentContainerStyle={ui.scroll}
@@ -103,10 +109,7 @@ export default function AccountsScreen() {
                 <AccountCard
                   key={acc.id}
                   account={acc}
-                  onPress={() => Alert.alert(acc.name, `Balance: ₱${acc.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`, [
-                    { text: 'OK' },
-                    { text: 'Delete', style: 'destructive', onPress: () => confirmDelete(acc) },
-                  ])}
+                  onPress={() => router.push({ pathname: '/modal/add-account', params: { id: String(acc.id) } })}
                 />
               ))}
             </View>
@@ -117,7 +120,7 @@ export default function AccountsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   net: { fontSize: 32, fontWeight: '800', color: Colors.textPrimary, marginTop: 4 },
   split: { flexDirection: 'row', marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.border },
   splitItem: { flex: 1 },
@@ -127,4 +130,4 @@ const styles = StyleSheet.create({
   groupHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 },
   groupTotal: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-});
+}));

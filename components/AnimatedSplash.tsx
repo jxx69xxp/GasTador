@@ -4,7 +4,7 @@
  */
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Image, StyleSheet, Text } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, Text } from 'react-native';
 import Colors from '../constants/Colors';
 
 const MIN_VISIBLE_MS = 1200;
@@ -21,7 +21,7 @@ export function AnimatedSplash({ ready }: { ready: boolean }) {
     (async () => {
       const reduceMotion = await AccessibilityInfo.isReduceMotionEnabled().catch(() => false);
       await SplashScreen.hideAsync().catch(() => {});      // our overlay looks identical, so no flash
-      Animated.timing(reveal, { toValue: 1, duration: reduceMotion ? 0 : 450, useNativeDriver: true }).start();
+      Animated.timing(reveal, { toValue: 1, duration: reduceMotion ? 0 : 600, easing: Easing.out(Easing.back(2)), useNativeDriver: true }).start();
       const wait = Math.max(0, MIN_VISIBLE_MS - (Date.now() - startedAt));
       setTimeout(() => {
         if (cancelled) return;
@@ -35,9 +35,12 @@ export function AnimatedSplash({ ready }: { ready: boolean }) {
   if (done) return null;
 
   const rise = reveal.interpolate({ inputRange: [0, 1], outputRange: [12, 0] });
+  // cat hops up and wiggles once as the name appears
+  const hop = reveal.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -18, 0] });
+  const wiggle = reveal.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: ['0deg', '-6deg', '6deg', '-3deg', '0deg'] });
   return (
     <Animated.View style={[styles.overlay, { opacity: fade }]} accessibilityLabel="Paws is loading">
-      <Image source={require('../assets/splash-icon.png')} style={styles.cat} />
+      <Animated.Image source={require('../assets/splash-icon.png')} style={[styles.cat, { transform: [{ translateY: hop }, { rotate: wiggle }] }]} />
       <Animated.View style={{ opacity: reveal, transform: [{ translateY: rise }], alignItems: 'center' }}>
         <Text style={styles.title}>Paws</Text>
         <Text style={styles.tagline}>Paws before you spend</Text>

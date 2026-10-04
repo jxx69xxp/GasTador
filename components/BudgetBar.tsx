@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Colors from '../constants/Colors';
 import type { Budget } from '../lib/types';
 import { shadow } from './ui';
+import { themed } from './theme';
 
 interface Props {
   budget: Budget;
@@ -46,7 +47,7 @@ export function BudgetBar({ budget }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: { backgroundColor: Colors.cardBg, borderRadius: 18, padding: 16, marginTop: 10, ...shadow },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   leftRow: { flexDirection: 'row', alignItems: 'center' },
@@ -64,4 +65,4 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'space-between' },
   spent: { fontSize: 13, color: Colors.textSecondary },
   remaining: { fontSize: 13, fontWeight: '600' },
-});
+}));

@@ -12,6 +12,8 @@ import type {
   NetWorth, Profile, Transaction, TransactionType,
 } from '../types';
 import type { DbAdapter } from './DbAdapter';
+import { countTransactions, SNAPSHOT_SCHEMA, validateSnapshot, type Snapshot } from './snapshot';
+export { countTransactions, SNAPSHOT_SCHEMA, validateSnapshot, type Snapshot };
 
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
@@ -107,6 +109,17 @@ export async function createAccount(
   return id;
 }
 
+export async function updateAccount(
+  _db: DbAdapter,
+  accountId: number,
+  data: { name: string; type: Account['type']; balance: number; color: string; icon: string }
+): Promise<void> {
+  const store = load();
+  const acc = store.accounts.find(a => a.id === accountId);
+  if (acc) Object.assign(acc, data, { balance: fmt(data.balance) });
+  save(store);
+}
+
 export async function updateAccountBalance(_db: DbAdapter, accountId: number, delta: number): Promise<void> {
   const store = load();
   const acc = store.accounts.find(a => a.id === accountId);
@@ -125,8 +138,8 @@ export async function getNetWorth(_db: DbAdapter, profileId: number): Promise<Ne
   const accs = store.accounts.filter(a => a.profile_id === profileId && a.include_in_net_worth === 1);
   let assets = 0, liabilities = 0;
   for (const a of accs) {
-    if ((a.type === 'credit_card' || a.type === 'loan') && a.balance < 0) {
-      liabilities += Math.abs(a.balance);
+    if (a.type === 'credit_card' || a.type === 'loan') {
+      liabilities += Math.abs(a.balance); // owed whichever sign was entered (same as queries.ts)
     } else if (a.balance > 0) {
       assets += a.balance;
     }
@@ -328,5 +341,28 @@ export async function upsertBudget(
 export async function deleteBudget(_db: DbAdapter, budgetId: number): Promise<void> {
   const store = load();
   store.budgets = store.budgets.filter(b => b.id !== budgetId);
+  save(store);
+}
+
+// ─── Backup snapshot (cloud sync) ─────────────────────────────────────────────
+
+
+export async function exportData(_db: DbAdapter): Promise<Snapshot> {
+  const store = load();
+  const tables: Snapshot['tables'] = {};
+  for (const [t, cols] of Object.entries(SNAPSHOT_SCHEMA)) {
+    tables[t] = ((store as unknown as Record<string, Record<string, unknown>[]>)[t] ?? [])
+      .map(r => Object.fromEntries(cols.map(c => [c, r[c] ?? null])));
+  }
+  return { version: 1, tables };
+}
+
+export async function importData(_db: DbAdapter, snap: Snapshot): Promise<void> {
+  validateSnapshot(snap);
+  const store = load();
+  for (const t of Object.keys(SNAPSHOT_SCHEMA)) {
+    (store as unknown as Record<string, unknown[]>)[t] = snap.tables[t] ?? [];
+  }
+  store.seeded = true;
   save(store);
 }

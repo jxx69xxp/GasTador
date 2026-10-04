@@ -1,9 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
 import React, { useEffect } from 'react';
+import { Alert, AppState } from 'react-native';
 import Colors from '../../constants/Colors';
 import { useAuth } from '../../lib/auth';
+import { useDb } from '../../lib/db/DbContext';
 import { schedulePaydays, setupDailyReminder } from '../../lib/notifications';
+import { backupNow, getCloudBackup, localTransactionCount, restoreFromCloud } from '../../lib/sync';
+import { countTransactions } from '../../lib/db/queries';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -25,6 +29,30 @@ export default function TabLayout() {
     if (allowed) schedulePaydays(paydays).catch(() => {});
   }, [allowed, paydays]);
 
+  const db = useDb();
+  const online = !!session && !offline;
+
+  // Online: back up whenever the app goes to the background (skips empty installs, see backupNow)
+  useEffect(() => {
+    if (!online) return;
+    const sub = AppState.addEventListener('change', s => { if (s === 'background') backupNow(db, { auto: true }).catch(() => {}); });
+    return () => sub.remove();
+  }, [online, db]);
+
+  // New phone: offer to restore when this phone is empty but the account has a backup
+  useEffect(() => {
+    if (!online) return;
+    (async () => {
+      const [cloud, local] = await Promise.all([getCloudBackup(), localTransactionCount(db)]);
+      if (!cloud || local > 0 || countTransactions(cloud.data) === 0) return;
+      const when = new Date(cloud.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      Alert.alert('Restore your backup?', `Found ${countTransactions(cloud.data)} transactions backed up on ${when}.`, [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Restore', onPress: () => restoreFromCloud(db).catch(e => Alert.alert('Restore failed', String(e.message ?? e))) },
+      ]);
+    })().catch(() => {});
+  }, [online, db]);
+
   if (!ready) return null;
   if (!allowed) return <Redirect href="/mode" />;
 
@@ -34,7 +62,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarStyle: {
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.surface,
           borderTopColor: Colors.border,
         },
         tabBarLabelStyle: {

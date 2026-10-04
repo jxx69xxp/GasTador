@@ -1,10 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
 import React, { useEffect } from 'react';
-import { TouchableOpacity } from 'react-native';
 import Colors from '../../constants/Colors';
 import { useAuth } from '../../lib/auth';
-import { cancelReminders, setupDailyReminder } from '../../lib/notifications';
+import { schedulePaydays, setupDailyReminder } from '../../lib/notifications';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -14,14 +13,20 @@ const tabIcon = (name: string) => ({ focused, color, size }: { focused: boolean;
 );
 
 export default function TabLayout() {
-  const { session, signOut } = useAuth();
+  const { session, offline, ready, paydays } = useAuth();
+  const allowed = !!session || !!offline;
 
   useEffect(() => {
-    if (session) setupDailyReminder().catch(() => {});
-  }, [session]);
+    if (allowed) setupDailyReminder().catch(() => {});
+  }, [allowed]);
 
-  if (session === undefined) return null;
-  if (!session) return <Redirect href="/login" />;
+  // re-roll the 12-month payday window on every open and whenever the days change
+  useEffect(() => {
+    if (allowed) schedulePaydays(paydays).catch(() => {});
+  }, [allowed, paydays]);
+
+  if (!ready) return null;
+  if (!allowed) return <Redirect href="/mode" />;
 
   return (
     <Tabs
@@ -36,19 +41,7 @@ export default function TabLayout() {
           fontSize: 11,
           fontWeight: '600',
         },
-        headerStyle: { backgroundColor: Colors.primary },
-        headerTintColor: Colors.white,
-        headerTitleStyle: { fontWeight: '700', fontSize: 18 },
-        headerRight: () => (
-          <TouchableOpacity
-            onPress={() => { cancelReminders(); signOut(); }}
-            style={{ marginRight: 8, padding: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel="Sign out"
-          >
-            <Ionicons name="log-out-outline" size={24} color={Colors.white} />
-          </TouchableOpacity>
-        ),
+        headerShown: false, // every tab draws its own ScreenHeader (components/ui.tsx)
       }}
     >
       <Tabs.Screen
@@ -70,9 +63,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="transactions"
         options={{
-          title: 'Transactions',
-          tabBarLabel: 'Log',
-          tabBarIcon: tabIcon('list'),
+          title: 'History',
+          tabBarLabel: 'History',
+          tabBarIcon: tabIcon('time'),
         }}
       />
       <Tabs.Screen

@@ -1,5 +1,5 @@
 /**
- * MeowMeow — Add / Edit Budget Modal
+ * Paws — Add / Edit Budget Modal
  * Set a monthly spend limit for an expense category
  */
 

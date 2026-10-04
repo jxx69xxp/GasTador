@@ -1,49 +1,64 @@
 /**
- * MeowMeow — Transactions Screen
- * Shows full transaction log with filter by type and delete on long-press
+ * Paws — History Screen
+ * This month's totals, where the money went (by category), then the full history grouped by day.
  */
-
-import { router } from 'expo-router';
-import { useDb } from '../../lib/db/DbContext';
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AmountText } from '../../components/AmountText';
 import { TransactionItem } from '../../components/TransactionItem';
+import { EmptyState, Fab, ScreenHeader, ui } from '../../components/ui';
 import Colors from '../../constants/Colors';
-import { deleteTransaction, getActiveProfile, getTransactions } from '../../lib/db/queries';
-import type { Profile, Transaction, TransactionType } from '../../lib/types';
+import { useDb } from '../../lib/db/DbContext';
+import { deleteTransaction, getActiveProfile, getTransactions, getTransactionsByDateRange } from '../../lib/db/queries';
+import type { Transaction, TransactionType } from '../../lib/types';
 
 type Filter = 'all' | TransactionType;
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
-  { id: 'expense', label: '🔴 Expense' },
-  { id: 'income', label: '🟢 Income' },
-  { id: 'transfer', label: '🔵 Transfer' },
+  { id: 'expense', label: 'Expenses' },
+  { id: 'income', label: 'Income' },
+  { id: 'transfer', label: 'Transfers' },
 ];
 
-export default function TransactionsScreen() {
+type Slice = { name: string; icon: string; color: string; total: number };
+
+const peso = (n: number) => `₱${Math.round(n).toLocaleString('en-PH')}`;
+
+export default function HistoryScreen() {
   const db = useDb();
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [month, setMonth] = useState({ income: 0, expenses: 0 });
+  const [slices, setSlices] = useState<Slice[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const p = await getActiveProfile(db);
     if (!p) return;
-    setProfile(p);
-    const txns = await getTransactions(db, p.id, 100, 0);
+    const today = new Date().toISOString().slice(0, 10);
+    const [txns, monthTxns] = await Promise.all([
+      getTransactions(db, p.id, 100, 0),
+      getTransactionsByDateRange(db, p.id, `${today.slice(0, 7)}-01`, today),
+    ]);
     setTransactions(txns);
+
+    const byCat = new Map<string, Slice>();
+    let income = 0, expenses = 0;
+    for (const t of monthTxns) {
+      if (t.type === 'income') income += t.amount;
+      if (t.type !== 'expense') continue;
+      expenses += t.amount;
+      const key = t.category_name ?? 'Uncategorized';
+      const s = byCat.get(key) ?? { name: key, icon: t.category_icon ?? '📦', color: t.category_color ?? Colors.textMuted, total: 0 };
+      s.total += t.amount;
+      byCat.set(key, s);
+    }
+    setMonth({ income, expenses });
+    setSlices([...byCat.values()].sort((a, b) => b.total - a.total));
   }, [db]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -52,77 +67,95 @@ export default function TransactionsScreen() {
   }, [load]);
 
   const handleDelete = useCallback((txn: Transaction) => {
-    Alert.alert(
-      'Delete Transaction',
-      `Remove "${txn.memo || txn.category_name || txn.type}" (₱${txn.amount.toLocaleString()})?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete', style: 'destructive',
-          onPress: async () => { await deleteTransaction(db, txn.id); load(); },
-        },
-      ]
-    );
+    Alert.alert('Delete Transaction', `Remove "${txn.memo || txn.category_name || txn.type}" (₱${txn.amount.toLocaleString()})?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await deleteTransaction(db, txn.id); load(); } },
+    ]);
   }, [db, load]);
 
   const filtered = filter === 'all' ? transactions : transactions.filter(t => t.type === filter);
-
-  // Group by date
-  const byDate: Record<string, Transaction[]> = {};
-  for (const txn of filtered) {
-    if (!byDate[txn.date]) byDate[txn.date] = [];
-    byDate[txn.date].push(txn);
-  }
+  const byDate = new Map<string, Transaction[]>();
+  filtered.forEach(t => byDate.set(t.date, [...(byDate.get(t.date) ?? []), t]));
+  const monthName = new Date().toLocaleString('en-US', { month: 'long' });
 
   return (
-    <View style={styles.screen}>
-      {/* Filter Bar */}
-      <View style={styles.filterBar}>
-        {FILTERS.map(f => (
-          <TouchableOpacity
-            key={f.id}
-            style={[styles.filterChip, filter === f.id && styles.filterActive]}
-            onPress={() => setFilter(f.id)}
-          >
-            <Text style={[styles.filterLabel, filter === f.id && styles.filterLabelActive]}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
+    <View style={ui.screen}>
+      <ScreenHeader title="History" subtitle="Where your money goes" />
       <ScrollView
-        contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        contentContainerStyle={ui.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {Object.keys(byDate).length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyText}>No transactions found.</Text>
-          </View>
-        ) : (
-          Object.entries(byDate).map(([date, txns]) => (
-            <View key={date}>
-              <DateHeader date={date} txns={txns} />
-              {txns.map(txn => (
-                <TransactionItem key={txn.id} txn={txn} onLongPress={() => handleDelete(txn)} />
+        {/* This month */}
+        <View style={styles.statsRow}>
+          <Stat label="INCOME" amount={month.income} color={Colors.income} />
+          <Stat label="SPENT" amount={month.expenses} color={Colors.expense} />
+          <Stat label="NET" amount={month.income - month.expenses} color={month.income >= month.expenses ? Colors.income : Colors.expense} />
+        </View>
+
+        {/* Expense distribution */}
+        <View style={ui.card}>
+          <Text style={styles.cardTitle}>Spending in {monthName}</Text>
+          <Text style={styles.cardSub}>By category</Text>
+          {slices.length === 0 ? (
+            <Text style={styles.muted}>No expenses yet this month.</Text>
+          ) : (
+            <>
+              <View style={styles.stack} accessibilityLabel={`Top category: ${slices[0].name}, ${Math.round((slices[0].total / month.expenses) * 100)} percent`}>
+                {slices.map(s => (
+                  <View key={s.name} style={{ flex: s.total, backgroundColor: s.color }} />
+                ))}
+              </View>
+              {slices.slice(0, 5).map(s => (
+                <View key={s.name} style={styles.legendRow}>
+                  <View style={[styles.dot, { backgroundColor: s.color }]} />
+                  <Text style={styles.legendName} numberOfLines={1}>{s.icon} {s.name}</Text>
+                  <Text style={styles.legendPct}>{Math.round((s.total / month.expenses) * 100)}%</Text>
+                  <Text style={styles.legendAmt}>{peso(s.total)}</Text>
+                </View>
               ))}
+            </>
+          )}
+        </View>
+
+        {/* Filters */}
+        <View style={styles.segment} accessibilityRole="tablist">
+          {FILTERS.map(f => (
+            <TouchableOpacity
+              key={f.id}
+              style={[styles.segItem, filter === f.id && styles.segActive]}
+              onPress={() => setFilter(f.id)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: filter === f.id }}
+            >
+              <Text style={[styles.segLabel, filter === f.id && styles.segLabelActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* History */}
+        {byDate.size === 0 ? (
+          <EmptyState icon="receipt-outline" text="No transactions found." />
+        ) : (
+          [...byDate].map(([date, txns]) => (
+            <View key={date} style={[ui.card, { paddingVertical: 6 }]}>
+              <DateHeader date={date} txns={txns} />
+              {txns.map(txn => <TransactionItem key={txn.id} txn={txn} onLongPress={() => handleDelete(txn)} />)}
             </View>
           ))
         )}
-        <View style={{ height: 100 }} />
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/modal/add-transaction')}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        accessibilityLabel="Add transaction"
-      >
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+      <Fab label="Expense" onPress={() => router.push('/modal/add-transaction')} />
+    </View>
+  );
+}
+
+function Stat({ label, amount, color }: { label: string; amount: number; color: string }) {
+  return (
+    <View style={[ui.card, styles.stat]}>
+      <Text style={ui.label}>{label}</Text>
+      <AmountText amount={amount} style={[styles.statValue, { color }]} />
     </View>
   );
 }
@@ -130,69 +163,40 @@ export default function TransactionsScreen() {
 function DateHeader({ date, txns }: { date: string; txns: Transaction[] }) {
   const income = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const expenses = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const d = new Date(date + 'T00:00:00');
-  const label = d.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' });
-
+  const label = new Date(date + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' });
   return (
     <View style={styles.dateHeader}>
-      <Text style={styles.dateLabel}>{label}</Text>
-      <View style={styles.dateTotals}>
-        {income > 0 && <Text style={styles.dateIncome}>+₱{income.toLocaleString('en-PH', { minimumFractionDigits: 0 })}</Text>}
-        {expenses > 0 && <Text style={styles.dateExpense}>-₱{expenses.toLocaleString('en-PH', { minimumFractionDigits: 0 })}</Text>}
+      <Text style={styles.dateLabel}>{label.toUpperCase()}</Text>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {income > 0 && <Text style={[styles.dateTotal, { color: Colors.income }]}>+{peso(income)}</Text>}
+        {expenses > 0 && <Text style={[styles.dateTotal, { color: Colors.expense }]}>-{peso(expenses)}</Text>}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.screenBg },
-  filterBar: {
-    flexDirection: 'row',
-    padding: 12,
-    gap: 8,
-    backgroundColor: Colors.white,
-    borderBottomColor: Colors.border,
-    borderBottomWidth: 1,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: Colors.screenBg,
-  },
-  filterActive: { backgroundColor: Colors.primary },
-  filterLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
-  filterLabelActive: { color: Colors.white },
-  scroll: { padding: 16, flexGrow: 1 },
-  dateHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  dateLabel: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
-  dateTotals: { flexDirection: 'row', gap: 8 },
-  dateIncome: { fontSize: 12, fontWeight: '700', color: Colors.income },
-  dateExpense: { fontSize: 12, fontWeight: '700', color: Colors.expense },
-  empty: { alignItems: 'center', paddingVertical: 60, flex: 1 },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 14, color: Colors.textSecondary },
-  fab: {
-    position: 'absolute',
-    bottom: 80,
-    right: 20,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  fabIcon: { fontSize: 28, color: Colors.white, lineHeight: 30 },
+  statsRow: { flexDirection: 'row', gap: 10 },
+  stat: { flex: 1, padding: 12 },
+  statValue: { fontSize: 15, fontWeight: '800', marginTop: 4 },
+
+  cardTitle: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
+  cardSub: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12 },
+  muted: { fontSize: 14, color: Colors.textSecondary },
+  stack: { flexDirection: 'row', height: 14, borderRadius: 7, overflow: 'hidden', gap: 2, marginBottom: 10 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7 },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  legendName: { flex: 1, fontSize: 14, color: Colors.textPrimary, fontWeight: '600' },
+  legendPct: { fontSize: 13, color: Colors.textSecondary, fontWeight: '700', width: 40, textAlign: 'right' },
+  legendAmt: { fontSize: 14, color: Colors.textPrimary, fontWeight: '800', minWidth: 70, textAlign: 'right' },
+
+  segment: { flexDirection: 'row', backgroundColor: Colors.white, borderRadius: 14, padding: 4, marginTop: 18, borderWidth: 1, borderColor: Colors.border },
+  segItem: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  segActive: { backgroundColor: Colors.primary },
+  segLabel: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
+  segLabelActive: { color: Colors.white },
+
+  dateHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 2 },
+  dateLabel: { fontSize: 12, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.6 },
+  dateTotal: { fontSize: 13, fontWeight: '800' },
 });

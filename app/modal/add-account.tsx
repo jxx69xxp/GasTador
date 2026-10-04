@@ -1,5 +1,5 @@
 /**
- * MeowMeow — Add Account Modal
+ * Paws — Add Account Modal
  */
 
 import { router } from 'expo-router';

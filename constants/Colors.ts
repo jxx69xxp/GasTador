@@ -1,4 +1,4 @@
-// MeowMeow Color Palette
+// Paws Color Palette
 // Playful fintech: bright blue actions + coral/purple/sky brand gradient (WCAG AA on light)
 
 export const Colors = {

@@ -1,8 +1,9 @@
 /**
- * MeowMeow — Add Transaction Modal
- * Handles income, expense, and transfer
+ * Paws — Add Transaction sheet
+ * Big amount, Expense / Income / Transfer switch, note, category and account chips, date.
  */
 
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useDb } from '../../lib/db/DbContext';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -17,6 +18,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { shadow } from '../../components/ui';
 import Colors from '../../constants/Colors';
 import { getAccounts, getActiveProfile, getBudgets, getCategories, postTransaction } from '../../lib/db/queries';
 import { notifyBudget } from '../../lib/notifications';
@@ -25,9 +28,9 @@ import type { Account, Category, TransactionType } from '../../lib/types';
 const TODAY = new Date().toISOString().slice(0, 10);
 
 const TYPE_OPTIONS: { id: TransactionType; label: string; color: string }[] = [
-  { id: 'expense', label: '🔴 Expense', color: Colors.expense },
-  { id: 'income', label: '🟢 Income', color: Colors.income },
-  { id: 'transfer', label: '🔵 Transfer', color: Colors.transfer },
+  { id: 'expense', label: 'Expense', color: Colors.expense },
+  { id: 'income', label: 'Income', color: Colors.income },
+  { id: 'transfer', label: 'Transfer', color: Colors.transfer },
 ];
 
 export default function AddTransactionModal() {
@@ -42,6 +45,7 @@ export default function AddTransactionModal() {
   const [selectedToAccount, setSelectedToAccount] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const load = useCallback(async () => {
     const p = await getActiveProfile(db);
@@ -66,6 +70,10 @@ export default function AddTransactionModal() {
     const amt = parseFloat(amount);
     if (!amount || isNaN(amt) || amt <= 0) {
       Alert.alert('Invalid Amount', 'Please enter a valid amount greater than 0.');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(Date.parse(date))) {
+      Alert.alert('Invalid Date', 'Use the format YYYY-MM-DD, e.g. 2026-10-04.');
       return;
     }
     if (!selectedAccount) {
@@ -107,162 +115,196 @@ export default function AddTransactionModal() {
     }
   }, [db, type, amount, memo, date, selectedAccount, selectedToAccount, selectedCategory]);
 
+  const active = TYPE_OPTIONS.find(o => o.id === type)!;
+  const fromAccount = accounts.find(a => a.id === selectedAccount);
+
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Type Picker */}
-        <Text style={styles.label}>Type</Text>
-        <View style={styles.typeRow}>
+      {/* Top bar: close + type switch */}
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.close} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close">
+          <Ionicons name="close" size={22} color={Colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={styles.segment} accessibilityRole="tablist">
           {TYPE_OPTIONS.map(opt => (
             <TouchableOpacity
               key={opt.id}
-              style={[styles.typeChip, type === opt.id && { backgroundColor: opt.color }]}
+              style={[styles.segItem, type === opt.id && { backgroundColor: opt.color }]}
               onPress={() => { setType(opt.id); setSelectedCategory(null); }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: type === opt.id }}
             >
-              <Text style={[styles.typeLabel, type === opt.id && { color: Colors.white }]}>
-                {opt.label}
-              </Text>
+              <Text style={[styles.segLabel, type === opt.id && { color: Colors.white }]}>{opt.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
+        <View style={{ width: 44 }} />
+      </View>
 
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Amount */}
-        <Text style={styles.label}>Amount (₱)</Text>
-        <TextInput
-          style={styles.input}
-          value={amount}
-          onChangeText={setAmount}
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-          placeholderTextColor={Colors.textMuted}
-        />
-
-        {/* Date */}
-        <Text style={styles.label}>Date</Text>
-        <TextInput
-          style={styles.input}
-          value={date}
-          onChangeText={setDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor={Colors.textMuted}
-        />
-
-        {/* Source Account */}
-        <Text style={styles.label}>{type === 'transfer' ? 'From Account' : 'Account'}</Text>
-        <View style={styles.chipRow}>
-          {accounts.map(acc => (
-            <TouchableOpacity
-              key={acc.id}
-              style={[styles.chip, selectedAccount === acc.id && { backgroundColor: acc.color }]}
-              onPress={() => setSelectedAccount(acc.id)}
-            >
-              <Text style={[styles.chipLabel, selectedAccount === acc.id && { color: Colors.white }]}>
-                {acc.icon} {acc.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.amountRow}>
+          <Text style={styles.currency}>₱</Text>
+          <TextInput
+            style={styles.amount}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0"
+            keyboardType="decimal-pad"
+            placeholderTextColor={Colors.border}
+            accessibilityLabel="Amount in pesos"
+            autoFocus
+          />
         </View>
 
-        {/* To Account (transfer only) */}
-        {type === 'transfer' && (
-          <>
-            <Text style={styles.label}>To Account</Text>
-            <View style={styles.chipRow}>
-              {accounts.filter(a => a.id !== selectedAccount).map(acc => (
-                <TouchableOpacity
-                  key={acc.id}
-                  style={[styles.chip, selectedToAccount === acc.id && { backgroundColor: acc.color }]}
-                  onPress={() => setSelectedToAccount(acc.id)}
-                >
-                  <Text style={[styles.chipLabel, selectedToAccount === acc.id && { color: Colors.white }]}>
-                    {acc.icon} {acc.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
+        {/* Note */}
+        <View style={styles.noteBox}>
+          <Ionicons name="document-text-outline" size={20} color={Colors.textMuted} />
+          <TextInput
+            style={styles.note}
+            value={memo}
+            onChangeText={setMemo}
+            placeholder="Add a note…"
+            placeholderTextColor={Colors.textMuted}
+            accessibilityLabel="Note"
+          />
+        </View>
 
-        {/* Category (non-transfer) */}
+        {/* Category */}
         {type !== 'transfer' && (
           <>
-            <Text style={styles.label}>Category</Text>
+            <Text style={styles.label}>CATEGORY</Text>
             <View style={styles.chipRow}>
-              {filteredCategories.map(cat => (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.chip, selectedCategory === cat.id && { backgroundColor: cat.color }]}
-                  onPress={() => setSelectedCategory(cat.id)}
-                >
-                  <Text style={[styles.chipLabel, selectedCategory === cat.id && { color: Colors.white }]}>
-                    {cat.icon} {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {filteredCategories.map(cat => {
+                const on = selectedCategory === cat.id;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.chip, on && { borderColor: cat.color, backgroundColor: cat.color + '1F' }]}
+                    onPress={() => setSelectedCategory(on ? null : cat.id)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                  >
+                    <View style={[styles.chipIcon, { backgroundColor: cat.color + '26' }]}>
+                      <Text style={{ fontSize: 14 }}>{cat.icon}</Text>
+                    </View>
+                    <Text style={styles.chipLabel}>{cat.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </>
         )}
 
-        {/* Memo */}
-        <Text style={styles.label}>Memo (optional)</Text>
-        <TextInput
-          style={[styles.input, styles.inputMemo]}
-          value={memo}
-          onChangeText={setMemo}
-          placeholder="e.g. Starbucks latte, Salary March"
-          placeholderTextColor={Colors.textMuted}
-          multiline
-        />
+        {/* Account(s) */}
+        <Text style={styles.label}>{type === 'transfer' ? 'FROM ACCOUNT' : 'ACCOUNT'}</Text>
+        <AccountChips accounts={accounts} selected={selectedAccount} onSelect={setSelectedAccount} />
+        {type === 'transfer' && (
+          <>
+            <Text style={styles.label}>TO ACCOUNT</Text>
+            <AccountChips
+              accounts={accounts.filter(a => a.id !== selectedAccount)}
+              selected={selectedToAccount}
+              onSelect={setSelectedToAccount}
+            />
+          </>
+        )}
 
-        {/* Save */}
+        {/* Date */}
+        <Text style={styles.label}>LOGGED AT</Text>
+        <View style={styles.noteBox}>
+          <Ionicons name="calendar-outline" size={20} color={Colors.textMuted} />
+          <TextInput
+            style={styles.note}
+            value={date}
+            onChangeText={setDate}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor={Colors.textMuted}
+            accessibilityLabel="Date, format year month day"
+          />
+        </View>
+      </ScrollView>
+
+      {/* Bottom bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>{type === 'transfer' ? 'FROM' : 'ACCOUNT'}</Text>
+          <Text style={styles.accountName} numberOfLines={1}>
+            {fromAccount ? `${fromAccount.icon} ${fromAccount.name}` : 'Pick an account'}
+          </Text>
+        </View>
         <TouchableOpacity
-          style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+          style={[styles.saveBtn, { backgroundColor: active.color }, saving && { opacity: 0.6 }]}
           onPress={handleSave}
           disabled={saving}
+          accessibilityRole="button"
         >
-          <Text style={styles.saveBtnLabel}>{saving ? 'Saving…' : 'Save Transaction'}</Text>
+          <Text style={styles.saveLabel}>{saving ? 'Saving…' : `Save ${active.label}`}</Text>
         </TouchableOpacity>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
+  );
+}
+
+function AccountChips({ accounts, selected, onSelect }: {
+  accounts: Account[]; selected: number | null; onSelect: (id: number) => void;
+}) {
+  return (
+    <View style={styles.chipRow}>
+      {accounts.map(acc => {
+        const on = selected === acc.id;
+        return (
+          <TouchableOpacity
+            key={acc.id}
+            style={[styles.chip, on && { borderColor: acc.color, backgroundColor: acc.color + '1F' }]}
+            onPress={() => onSelect(acc.id)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: on }}
+          >
+            <View style={[styles.chipIcon, { backgroundColor: acc.color + '26' }]}>
+              <Text style={{ fontSize: 14 }}>{acc.icon}</Text>
+            </View>
+            <Text style={styles.chipLabel}>{acc.name}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.screenBg },
-  scroll: { padding: 20 },
-  label: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginTop: 16, marginBottom: 8 },
-  typeRow: { flexDirection: 'row', gap: 8 },
-  typeChip: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, backgroundColor: Colors.border,
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  close: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', ...shadow },
+  segment: { flexDirection: 'row', backgroundColor: Colors.white, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: Colors.border },
+  segItem: { minHeight: 38, paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  segLabel: { fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
+
+  scroll: { paddingHorizontal: 18, paddingBottom: 24 },
+  amountRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 18 },
+  currency: { fontSize: 28, fontWeight: '700', color: Colors.textMuted, marginRight: 6 },
+  amount: { fontSize: 56, fontWeight: '800', color: Colors.textPrimary, minWidth: 80, textAlign: 'center' },
+
+  noteBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Colors.white, borderRadius: 16,
+    paddingHorizontal: 14, minHeight: 52, ...shadow,
   },
-  typeLabel: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
-  input: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: Colors.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  inputMemo: { minHeight: 80, textAlignVertical: 'top' },
+  note: { flex: 1, fontSize: 16, color: Colors.textPrimary, paddingVertical: 12 },
+
+  label: { fontSize: 11, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8, marginTop: 20, marginBottom: 10 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 20, backgroundColor: Colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingLeft: 6, paddingRight: 12,
+    borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.border,
   },
-  chipLabel: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
-  saveBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 28,
+  chipIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  chipLabel: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+
+  bottomBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingTop: 4,
+    backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.border,
   },
-  saveBtnLabel: { color: Colors.white, fontSize: 16, fontWeight: '700' },
+  accountName: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginTop: -6 },
+  saveBtn: { minHeight: 52, paddingHorizontal: 22, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+  saveLabel: { color: Colors.white, fontSize: 16, fontWeight: '800' },
 });

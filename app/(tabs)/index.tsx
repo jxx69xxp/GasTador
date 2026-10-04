@@ -1,62 +1,93 @@
 /**
- * MeowMeow — Dashboard Screen
- * Shows: Net worth card, today/month summary, quick-add FAB, recent transactions
+ * Paws — Dashboard Screen
+ * Greeting, Paws the cat's spending tip, last-7-days chart, spent today, month balance, recent activity.
  */
 
-import { router } from 'expo-router';
-import { useDb } from '../../lib/db/DbContext';
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmountText } from '../../components/AmountText';
 import { TransactionItem } from '../../components/TransactionItem';
+import { CatTip, EmptyState, Fab, shadow } from '../../components/ui';
 import Colors from '../../constants/Colors';
+import { useAuth } from '../../lib/auth';
+import { useDb } from '../../lib/db/DbContext';
 import {
-  deleteTransaction,
-  getActiveProfile,
-  getDailySummary,
-  getMonthlySummary,
-  getNetWorth,
-  getTransactions,
+  deleteTransaction, getActiveProfile, getMonthlySummary, getTransactions, getTransactionsByDateRange,
 } from '../../lib/db/queries';
-import type { DailySummary, NetWorth, Profile, Transaction } from '../../lib/types';
+import { daysUntilPayday } from '../../lib/paydayDates';
+import type { DailySummary, Transaction } from '../../lib/types';
 
-const TODAY = new Date().toISOString().slice(0, 10);
-const NOW = new Date();
+const iso = (d: Date) => d.toISOString().slice(0, 10); // same date convention as the rest of the app
+
+function greeting(now: Date) {
+  const h = now.getHours();
+  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+}
+
+// "pauljun69@gmail.com" -> "Pauljun"
+function firstName(email?: string) {
+  const s = (email ?? '').split('@')[0].replace(/[^a-zA-Z]/g, '');
+  return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : 'there';
+}
+
+function catTip(monthSpent: number, todaySpent: number, topCategory: string | null, hasAny: boolean) {
+  if (!hasAny) return "Hi, I'm Paws! Log your first expense and I'll keep an eye on your pesos.";
+  if (monthSpent === 0) return 'No spending yet this month. Purr-fect start!';
+  const fmt = (n: number) => `₱${Math.round(n).toLocaleString('en-PH')}`;
+  const where = topCategory ? `, mostly on ${topCategory}` : '';
+  const today = todaySpent === 0 ? ' Nothing spent today, nice!' : ` ${fmt(todaySpent)} so far today.`;
+  return `You've spent ${fmt(monthSpent)} this month${where}.${today}`;
+}
 
 export default function DashboardScreen() {
   const db = useDb();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [netWorth, setNetWorth] = useState<NetWorth>({ assets: 0, liabilities: 0, net: 0 });
-  const [todaySummary, setTodaySummary] = useState<DailySummary>({ income: 0, expenses: 0, net: 0 });
-  const [monthSummary, setMonthSummary] = useState<DailySummary>({ income: 0, expenses: 0, net: 0 });
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { session, name, paydays } = useAuth();
+  const insets = useSafeAreaInsets();
+  const [week, setWeek] = useState<{ label: string; total: number; isToday: boolean }[]>([]);
+  const [todaySpent, setTodaySpent] = useState(0);
+  const [month, setMonth] = useState<DailySummary>({ income: 0, expenses: 0, net: 0 });
+  const [topCategory, setTopCategory] = useState<string | null>(null);
+  const [recent, setRecent] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const p = await getActiveProfile(db);
     if (!p) return;
-    setProfile(p);
-    const [nw, today, month, txns] = await Promise.all([
-      getNetWorth(db, p.id),
-      getDailySummary(db, p.id, TODAY),
-      getMonthlySummary(db, p.id, NOW.getFullYear(), NOW.getMonth() + 1),
-      getTransactions(db, p.id, 10, 0),
+    const now = new Date();
+    const days = [...Array(7)].map((_, i) => new Date(now.getTime() - (6 - i) * 864e5));
+    const monthStart = `${iso(now).slice(0, 7)}-01`;
+    const rangeStart = iso(days[0]) < monthStart ? iso(days[0]) : monthStart;
+
+    const [range, monthSummary, latest] = await Promise.all([
+      getTransactionsByDateRange(db, p.id, rangeStart, iso(now)),
+      getMonthlySummary(db, p.id, now.getFullYear(), now.getMonth() + 1),
+      getTransactions(db, p.id, 5, 0),
     ]);
-    setNetWorth(nw);
-    setTodaySummary(today);
-    setMonthSummary(month);
-    setTransactions(txns);
+    const expenses = range.filter(t => t.type === 'expense');
+
+    const byDay = new Map<string, number>();
+    expenses.forEach(t => byDay.set(t.date, (byDay.get(t.date) ?? 0) + t.amount));
+    setWeek(days.map((d, i) => ({
+      label: d.toLocaleDateString('en-US', { weekday: 'narrow' }),
+      total: byDay.get(iso(d)) ?? 0,
+      isToday: i === 6,
+    })));
+    setTodaySpent(byDay.get(iso(now)) ?? 0);
+
+    const byCat = new Map<string, number>();
+    expenses.filter(t => t.date >= monthStart && t.category_name)
+      .forEach(t => byCat.set(t.category_name!, (byCat.get(t.category_name!) ?? 0) + t.amount));
+    setTopCategory([...byCat].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null);
+
+    setMonth(monthSummary);
+    setRecent(latest);
   }, [db]);
 
-  useEffect(() => { load(); }, [load]);
+  // Reload whenever the tab regains focus (e.g. after adding a transaction)
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -67,162 +98,195 @@ export default function DashboardScreen() {
   const handleDeleteTxn = useCallback((txn: Transaction) => {
     Alert.alert('Delete Transaction', `Remove "${txn.memo || txn.category_name || txn.type}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          await deleteTransaction(db, txn.id);
-          load();
-        },
-      },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await deleteTransaction(db, txn.id); load(); } },
     ]);
   }, [db, load]);
 
-  const monthName = NOW.toLocaleString('default', { month: 'long' });
+  const now = new Date();
+  const payday = daysUntilPayday(paydays, now);
+  const maxDay = Math.max(1, ...week.map(d => d.total));
+  const weekTotal = week.reduce((s, d) => s + d.total, 0);
 
   return (
     <View style={styles.screen}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.white} />}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header / Net Worth Hero ── */}
-        <View style={styles.hero}>
-          <Text style={styles.heroLabel}>Net Worth</Text>
-          <AmountText amount={netWorth.net} style={styles.heroAmount} />
-          <View style={styles.heroRow}>
-            <View style={styles.heroItem}>
-              <Text style={styles.heroSub}>Assets</Text>
-              <AmountText amount={netWorth.assets} style={styles.heroItemAmt} />
+        {/* ── Top actions ── */}
+
+        {/* ── Greeting + settings ── */}
+        <View style={styles.greetRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.date}>
+              {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
+            </Text>
+            <Text style={styles.greeting} accessibilityRole="header">
+              {greeting(now)}, <Text style={styles.name}>{name || firstName(session?.user.email)}</Text>!
+            </Text>
+          </View>
+          <IconPill icon="settings-outline" label="Settings" onPress={() => router.push('/settings')} />
+        </View>
+
+        {/* ── Paws the cat ── */}
+        <CatTip text={catTip(month.expenses, todaySpent, topCategory, recent.length > 0)} />
+
+        {/* ── Last 7 days + Spent today ── */}
+        <View style={styles.row}>
+          <View
+            style={[styles.card, { flex: 1.25 }]}
+            accessible
+            accessibilityLabel={`Last 7 days: ₱${Math.round(weekTotal).toLocaleString('en-PH')} spent`}
+          >
+            <Text style={styles.cardLabel}>LAST 7 DAYS</Text>
+            <View style={styles.chart}>
+              {week.map((d, i) => (
+                <View key={i} style={styles.barCol}>
+                  <View style={styles.barTrack}>
+                    <View style={[
+                      styles.bar,
+                      { height: `${Math.max(6, (d.total / maxDay) * 100)}%`, backgroundColor: d.isToday ? Colors.primary : Colors.primaryLight + '66' },
+                    ]} />
+                  </View>
+                  <Text style={[styles.barLabel, d.isToday && { color: Colors.primary, fontWeight: '800' }]}>{d.label}</Text>
+                </View>
+              ))}
             </View>
-            <View style={[styles.heroItem, styles.heroDivider]}>
-              <Text style={styles.heroSub}>Liabilities</Text>
-              <AmountText amount={netWorth.liabilities} style={[styles.heroItemAmt, { color: Colors.expense }]} />
-            </View>
+          </View>
+          <View style={[styles.card, { flex: 1, justifyContent: 'space-between' }]}>
+            <Text style={styles.cardLabel}>SPENT TODAY</Text>
+            <AmountText amount={todaySpent} style={styles.bigAmount} />
           </View>
         </View>
 
-        <View style={styles.content}>
-          {/* ── Today Summary ── */}
-          <Text style={styles.sectionTitle}>Today</Text>
-          <View style={styles.summaryRow}>
-            <SummaryCard label="Income" amount={todaySummary.income} color={Colors.income} />
-            <SummaryCard label="Expenses" amount={todaySummary.expenses} color={Colors.expense} />
-            <SummaryCard label="Net" amount={todaySummary.net} color={todaySummary.net >= 0 ? Colors.income : Colors.expense} />
+        {/* ── Payday ── */}
+        <TouchableOpacity style={styles.paydayCard} onPress={() => router.push('/settings')} accessibilityRole="button">
+          <View style={styles.monthIcon}>
+            <Ionicons name="cash-outline" size={20} color={Colors.income} />
           </View>
+          {payday ? (
+            <>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardLabel, { color: Colors.income }]}>DAYS UNTIL PAYDAY</Text>
+                <Text style={styles.paydayDays}>
+                  {payday.days === 0 ? 'Payday today! 🎉' : `${payday.days} day${payday.days === 1 ? '' : 's'}`}
+                </Text>
+              </View>
+              <Text style={styles.paydayDate}>{payday.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
+            </>
+          ) : (
+            <>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardLabel, { color: Colors.income }]}>PAYDAY</Text>
+                <Text style={styles.paydaySet}>Set your salary days for reminders</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.income} />
+            </>
+          )}
+        </TouchableOpacity>
 
-          {/* ── Month Summary ── */}
-          <Text style={styles.sectionTitle}>{monthName}</Text>
-          <View style={styles.summaryRow}>
-            <SummaryCard label="Income" amount={monthSummary.income} color={Colors.income} />
-            <SummaryCard label="Expenses" amount={monthSummary.expenses} color={Colors.expense} />
-            <SummaryCard label="Net" amount={monthSummary.net} color={monthSummary.net >= 0 ? Colors.income : Colors.expense} />
+        {/* ── Month balance ── */}
+        <TouchableOpacity style={styles.monthCard} onPress={() => router.push('/(tabs)/budgets')} accessibilityRole="button">
+          <View style={styles.monthIcon}>
+            <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
           </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.cardLabel, { color: Colors.primary }]}>LEFT THIS {now.toLocaleString('en-US', { month: 'long' }).toUpperCase()}</Text>
+            <AmountText amount={month.net} colorCoded style={styles.monthAmount} />
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <AmountText amount={month.income} style={[styles.small, { color: Colors.income }]} />
+            <AmountText amount={-month.expenses} style={[styles.small, { color: Colors.expense }]} />
+          </View>
+        </TouchableOpacity>
 
-          {/* ── Recent Transactions ── */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/transactions')}>
-              <Text style={styles.seeAll}>See all →</Text>
+        {/* ── Recent activity ── */}
+        <View style={styles.listCard}>
+          <View style={styles.listHeader}>
+            <View style={styles.monthIcon}>
+              <Ionicons name="receipt-outline" size={20} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.listTitle}>Recent activity</Text>
+              <Text style={styles.listSub}>Your latest income and expenses</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/transactions')} accessibilityRole="button">
+              <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>
-
-          {transactions.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>📊</Text>
-              <Text style={styles.emptyText}>No transactions yet.{'\n'}Tap + to log your first entry.</Text>
-            </View>
-          ) : (
-            transactions.map(txn => (
-              <TransactionItem key={txn.id} txn={txn} onLongPress={() => handleDeleteTxn(txn)} />
-            ))
-          )}
-
-          <View style={{ height: 100 }} />
+          {recent.length === 0
+            ? <EmptyState icon="receipt-outline" text={'No transactions yet.\nTap “+ Expense” to log your first one.'} />
+            : recent.map(txn => <TransactionItem key={txn.id} txn={txn} onLongPress={() => handleDeleteTxn(txn)} />)}
         </View>
+
+        <View style={{ height: 96 }} />
       </ScrollView>
 
-      {/* ── FAB ── */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/modal/add-transaction')}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        accessibilityLabel="Add transaction"
-      >
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+      <Fab label="Expense" onPress={() => router.push('/modal/add-transaction')} />
     </View>
   );
 }
 
-function SummaryCard({ label, amount, color }: { label: string; amount: number; color: string }) {
+function IconPill({ icon, label, showLabel, onPress }: {
+  icon: keyof typeof Ionicons.glyphMap; label: string; showLabel?: boolean; onPress: () => void;
+}) {
   return (
-    <View style={styles.summaryCard}>
-      <Text style={styles.summaryLabel}>{label}</Text>
-      <AmountText amount={amount} style={[styles.summaryAmount, { color }]} />
-    </View>
+    <TouchableOpacity style={styles.pill} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
+      <Ionicons name={icon} size={18} color={Colors.textSecondary} />
+      {showLabel && <Text style={styles.pillText}>{label}</Text>}
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.screenBg },
-  scroll: { flexGrow: 1 },
-  hero: {
-    backgroundColor: Colors.primary,
-    paddingTop: 60,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
-    alignItems: 'center',
+  scroll: { paddingHorizontal: 18 },
+
+  greetRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  pill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, minWidth: 44, justifyContent: 'center',
+    paddingHorizontal: 12, borderRadius: 22, backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border,
   },
-  heroLabel: { color: Colors.white + 'CC', fontSize: 13, fontWeight: '600', letterSpacing: 1 },
-  heroAmount: { color: Colors.white, fontSize: 38, fontWeight: '800', marginTop: 4 },
-  heroRow: { flexDirection: 'row', marginTop: 20, width: '100%' },
-  heroItem: { flex: 1, alignItems: 'center' },
-  heroDivider: { borderLeftWidth: 1, borderLeftColor: Colors.white + '33' },
-  heroSub: { color: Colors.white + 'AA', fontSize: 11, marginBottom: 4 },
-  heroItemAmt: { color: Colors.white, fontSize: 16, fontWeight: '700' },
+  pillText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
 
-  content: { padding: 16 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginTop: 20, marginBottom: 10 },
-  seeAll: { color: Colors.primary, fontSize: 13, fontWeight: '600' },
+  date: { fontSize: 12, fontWeight: '700', color: Colors.textMuted, letterSpacing: 0.8, marginTop: 12 },
+  greeting: { fontSize: 26, fontWeight: '600', color: Colors.textPrimary, marginTop: 4 },
+  name: { fontWeight: '800' },
 
-  summaryRow: { flexDirection: 'row', gap: 8 },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+
+  row: { flexDirection: 'row', gap: 12, marginTop: 14 },
+  card: { backgroundColor: Colors.white, borderRadius: 18, padding: 14, minHeight: 132, ...shadow },
+  cardLabel: { fontSize: 11, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8 },
+  bigAmount: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary },
+
+  chart: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginTop: 10 },
+  barCol: { flex: 1, alignItems: 'center', height: '100%' },
+  barTrack: { flex: 1, width: 8, justifyContent: 'flex-end' },
+  bar: { width: '100%', borderRadius: 4 },
+  barLabel: { fontSize: 11, color: Colors.textMuted, marginTop: 4, fontWeight: '600' },
+
+  paydayCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, padding: 14, borderRadius: 18,
+    backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0',
   },
-  summaryLabel: { fontSize: 11, color: Colors.textSecondary, marginBottom: 4, fontWeight: '600' },
-  summaryAmount: { fontSize: 14, fontWeight: '700' },
-
-  empty: { alignItems: 'center', paddingVertical: 40 },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-
-  fab: {
-    position: 'absolute',
-    bottom: 80,
-    right: 20,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+  paydayDays: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 },
+  paydayDate: { fontSize: 15, fontWeight: '800', color: Colors.income },
+  paydaySet: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginTop: 2 },
+  monthCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, padding: 14, borderRadius: 18,
+    backgroundColor: Colors.primaryBg, borderWidth: 1, borderColor: Colors.primaryLight + '40',
   },
-  fabIcon: { fontSize: 28, color: Colors.white, lineHeight: 30 },
+  monthIcon: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center',
+  },
+  monthAmount: { fontSize: 20, fontWeight: '800', marginTop: 2 },
+  small: { fontSize: 13, fontWeight: '700' },
+
+  listCard: { marginTop: 14, padding: 14, borderRadius: 18, backgroundColor: Colors.white, ...shadow },
+  listHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  listTitle: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
+  listSub: { fontSize: 13, color: Colors.textSecondary },
+  seeAll: { color: Colors.primary, fontSize: 14, fontWeight: '700', padding: 10 },
+
 });

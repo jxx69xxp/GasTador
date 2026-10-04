@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
   ActivityIndicator, DimensionValue, Image, ImageBackground, KeyboardAvoidingView, Platform, ScrollView,
@@ -19,7 +20,7 @@ const BUBBLES: { icon: keyof typeof Ionicons.glyphMap; color: string; size: numb
 ];
 
 export default function LoginScreen() {
-  const { session, signIn } = useAuth();
+  const { session, offline, signIn } = useAuth();
   const { height } = useWindowDimensions();
   const [mode, setMode] = useState<Mode | null>(null); // null = welcome
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (session) return <Redirect href="/" />;
+  if (session || offline) return <Redirect href="/" />;
 
   const heroH = height * (mode ? 0.34 : 0.56);
   const catSize = heroH * 0.62;
@@ -52,6 +53,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <StatusBar style="light" />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
         <ImageBackground source={require('../assets/hero-bg.png')} style={{ height: heroH }} resizeMode="cover">
           {!mode && BUBBLES.map(b => (
@@ -67,13 +69,13 @@ export default function LoginScreen() {
           <Image
             source={require('../assets/cat.png')}
             style={[styles.cat, { width: catSize, height: catSize, marginLeft: -catSize / 2 }]}
-            accessibilityLabel="MeowMeow cat mascot holding a coin"
+            accessibilityLabel="Paws cat mascot holding a coin"
           />
         </ImageBackground>
 
         <View style={styles.body}>
           <Text style={styles.title} accessibilityRole="header">
-            {mode === 'signup' ? 'Create your account' : mode === 'login' ? 'Welcome back!' : 'Welcome to MeowMeow!'}
+            {mode === 'signup' ? 'Create your account' : mode === 'login' ? 'Welcome back!' : 'Welcome to Paws!'}
           </Text>
           <Text style={styles.subtitle}>Paws before you spend</Text>
 
@@ -84,6 +86,9 @@ export default function LoginScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={() => pick('login')} accessibilityRole="button">
                 <Text style={[styles.btnLabel, styles.btnOutlineLabel]}>Sign In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.replace('/mode')} accessibilityRole="button">
+                <Text style={[styles.link, { color: Colors.textSecondary }]}>‹ Choose online or offline</Text>
               </TouchableOpacity>
             </View>
           ) : (

@@ -5,6 +5,7 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type Session } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
@@ -48,7 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signIn(mode: Mode, email: string, password: string) {
     const creds = { email: email.trim(), password };
     const { data, error } = mode === 'signup'
-      ? await supabase.auth.signUp(creds)
+      // confirmation email opens the app (gastador://login) instead of Supabase's default Site URL
+      ? await supabase.auth.signUp({ ...creds, options: { emailRedirectTo: Linking.createURL('/login') } })
       : await supabase.auth.signInWithPassword(creds);
     if (error) throw error;
     if (!data.session) throw new Error('Check your email to confirm your account, then log in.');

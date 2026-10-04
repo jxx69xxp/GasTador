@@ -1,10 +1,10 @@
 /**
- * Paws — Add Account Modal
+ * Paws — Add / Edit Account sheet (edit when opened with ?id=)
  */
 
-import { router } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useDb } from '../../lib/db/DbContext';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -17,8 +17,9 @@ import {
   View,
 } from 'react-native';
 import Colors from '../../constants/Colors';
-import { createAccount, getActiveProfile } from '../../lib/db/queries';
+import { createAccount, deleteAccount, getAccounts, getActiveProfile, updateAccount } from '../../lib/db/queries';
 import type { Account } from '../../lib/types';
+import { themed } from '../../components/theme';
 
 const ACCOUNT_TYPES: { id: Account['type']; label: string; icon: string; color: string }[] = [
   { id: 'cash',        label: 'Cash',        icon: '💵', color: Colors.cash },
@@ -35,12 +36,25 @@ const PALETTE = [
 
 export default function AddAccountModal() {
   const db = useDb();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const editId = id ? Number(id) : null;
   const [name, setName] = useState('');
   const [type, setType] = useState<Account['type']>('cash');
   const [balance, setBalance] = useState('0');
   const [color, setColor] = useState(Colors.cash);
   const [icon, setIcon] = useState('💵');
   const [saving, setSaving] = useState(false);
+
+  // edit mode: prefill from the stored account
+  useEffect(() => {
+    if (!editId) return;
+    (async () => {
+      const p = await getActiveProfile(db);
+      const acc = p && (await getAccounts(db, p.id)).find(a => a.id === editId);
+      if (!acc) return;
+      setName(acc.name); setType(acc.type); setBalance(String(acc.balance)); setColor(acc.color); setIcon(acc.icon);
+    })();
+  }, [db, editId]);
 
   const handleTypeSelect = (t: (typeof ACCOUNT_TYPES)[number]) => {
     setType(t.id);
@@ -53,30 +67,42 @@ export default function AddAccountModal() {
       Alert.alert('Name Required', 'Please enter an account name.');
       return;
     }
-    const bal = parseFloat(balance);
+    const bal = balance.trim() === '' ? 0 : Number(balance);
+    if (!Number.isFinite(bal)) {
+      Alert.alert('Invalid Balance', 'Enter a number, e.g. 1500 or -250.50.');
+      return;
+    }
     setSaving(true);
     try {
-      const p = await getActiveProfile(db);
-      if (!p) return;
-      await createAccount(db, p.id, {
-        name: name.trim(),
-        type,
-        balance: isNaN(bal) ? 0 : bal,
-        color,
-        icon,
-      });
+      const data = { name: name.trim(), type, balance: bal, color, icon };
+      if (editId) {
+        await updateAccount(db, editId, data);
+      } else {
+        const p = await getActiveProfile(db);
+        if (!p) return;
+        await createAccount(db, p.id, data);
+      }
       router.back();
     } catch (e) {
       Alert.alert('Error', String(e));
     } finally {
       setSaving(false);
     }
-  }, [db, name, type, balance, color, icon]);
+  }, [db, editId, name, type, balance, color, icon]);
+
+  const handleDelete = () => {
+    if (!editId) return;
+    Alert.alert('Delete Account', `Delete "${name}"? All its transactions will also be deleted.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await deleteAccount(db, editId); router.back(); } },
+    ]);
+  };
 
   const selectedType = ACCOUNT_TYPES.find(t => t.id === type)!;
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Stack.Screen options={{ title: editId ? 'Edit Account' : 'Add Account' }} />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Type */}
@@ -102,11 +128,11 @@ export default function AddAccountModal() {
           onChangeText={setName}
           placeholder={`e.g. ${selectedType.label} account`}
           placeholderTextColor={Colors.textMuted}
-          autoFocus
+          autoFocus={!editId}
         />
 
         {/* Opening Balance */}
-        <Text style={styles.label}>Opening Balance (₱)</Text>
+        <Text style={styles.label}>{editId ? 'Current Balance (₱)' : 'Opening Balance (₱)'}</Text>
         <TextInput
           style={styles.input}
           value={balance}
@@ -146,8 +172,14 @@ export default function AddAccountModal() {
           onPress={handleSave}
           disabled={saving}
         >
-          <Text style={styles.saveBtnLabel}>{saving ? 'Saving…' : 'Add Account'}</Text>
+          <Text style={styles.saveBtnLabel}>{saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Account'}</Text>
         </TouchableOpacity>
+
+        {editId && (
+          <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} accessibilityRole="button">
+            <Text style={styles.deleteLabel}>Delete Account</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -155,7 +187,7 @@ export default function AddAccountModal() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.screenBg },
   scroll: { padding: 20 },
   label: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginTop: 20, marginBottom: 8 },
@@ -164,7 +196,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: Colors.border,
@@ -173,7 +205,7 @@ const styles = StyleSheet.create({
   typeIcon: { fontSize: 22, marginBottom: 4 },
   typeLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
   input: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -186,7 +218,7 @@ const styles = StyleSheet.create({
   swatch: { width: 36, height: 36, borderRadius: 18 },
   swatchSelected: {
     borderWidth: 3,
-    borderColor: Colors.white,
+    borderColor: Colors.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -194,7 +226,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   preview: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     borderRadius: 14,
     borderLeftWidth: 4,
     padding: 16,
@@ -219,5 +251,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 28,
   },
-  saveBtnLabel: { color: Colors.white, fontSize: 16, fontWeight: '700' },
-});
+  deleteBtn: {
+    minHeight: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 12,
+    borderWidth: 1.5, borderColor: Colors.expense,
+  },
+  deleteLabel: { color: Colors.expense, fontSize: 16, fontWeight: '700' },
+  saveBtnLabel: { color: Colors.onPrimary, fontSize: 16, fontWeight: '700' },
+}));

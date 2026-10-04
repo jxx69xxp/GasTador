@@ -11,6 +11,7 @@ import Colors from '../../constants/Colors';
 import { useDb } from '../../lib/db/DbContext';
 import { deleteBudget, getActiveProfile, getBudgets } from '../../lib/db/queries';
 import type { Budget } from '../../lib/types';
+import { themed } from '../../components/theme';
 
 const peso = (n: number) => `₱${Math.round(n).toLocaleString('en-PH')}`;
 
@@ -99,10 +100,10 @@ export default function BudgetsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   big: { fontSize: 32, fontWeight: '800', color: Colors.textPrimary, marginTop: 4 },
   track: { height: 10, borderRadius: 5, backgroundColor: Colors.border, overflow: 'hidden', marginTop: 12 },
   fill: { height: '100%', borderRadius: 5 },
   split: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   splitText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
-});
+}));

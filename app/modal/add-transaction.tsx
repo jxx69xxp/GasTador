@@ -24,10 +24,12 @@ import Colors from '../../constants/Colors';
 import { getAccounts, getActiveProfile, getBudgets, getCategories, postTransaction } from '../../lib/db/queries';
 import { notifyBudget } from '../../lib/notifications';
 import type { Account, Category, TransactionType } from '../../lib/types';
+import { themed } from '../../components/theme';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
-const TYPE_OPTIONS: { id: TransactionType; label: string; color: string }[] = [
+// a function so the colors follow the active theme
+const typeOptions = (): { id: TransactionType; label: string; color: string }[] => [
   { id: 'expense', label: 'Expense', color: Colors.expense },
   { id: 'income', label: 'Income', color: Colors.income },
   { id: 'transfer', label: 'Transfer', color: Colors.transfer },
@@ -115,6 +117,7 @@ export default function AddTransactionModal() {
     }
   }, [db, type, amount, memo, date, selectedAccount, selectedToAccount, selectedCategory]);
 
+  const TYPE_OPTIONS = typeOptions();
   const active = TYPE_OPTIONS.find(o => o.id === type)!;
   const fromAccount = accounts.find(a => a.id === selectedAccount);
 
@@ -134,7 +137,7 @@ export default function AddTransactionModal() {
               accessibilityRole="tab"
               accessibilityState={{ selected: type === opt.id }}
             >
-              <Text style={[styles.segLabel, type === opt.id && { color: Colors.white }]}>{opt.label}</Text>
+              <Text style={[styles.segLabel, type === opt.id && { color: Colors.onPrimary }]}>{opt.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -272,11 +275,11 @@ function AccountChips({ accounts, selected, onSelect }: {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.screenBg },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-  close: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', ...shadow },
-  segment: { flexDirection: 'row', backgroundColor: Colors.white, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: Colors.border },
+  close: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', ...shadow },
+  segment: { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: Colors.border },
   segItem: { minHeight: 38, paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   segLabel: { fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
 
@@ -286,7 +289,7 @@ const styles = StyleSheet.create({
   amount: { fontSize: 56, fontWeight: '800', color: Colors.textPrimary, minWidth: 80, textAlign: 'center' },
 
   noteBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Colors.white, borderRadius: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Colors.surface, borderRadius: 16,
     paddingHorizontal: 14, minHeight: 52, ...shadow,
   },
   note: { flex: 1, fontSize: 16, color: Colors.textPrimary, paddingVertical: 12 },
@@ -295,16 +298,16 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingLeft: 6, paddingRight: 12,
-    borderRadius: 14, backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.border,
+    borderRadius: 14, backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border,
   },
   chipIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   chipLabel: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
 
   bottomBar: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingTop: 4,
-    backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.border,
+    backgroundColor: Colors.surface, borderTopWidth: 1, borderTopColor: Colors.border,
   },
   accountName: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginTop: -6 },
   saveBtn: { minHeight: 52, paddingHorizontal: 22, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-  saveLabel: { color: Colors.white, fontSize: 16, fontWeight: '800' },
-});
+  saveLabel: { color: Colors.onPrimary, fontSize: 16, fontWeight: '800' },
+}));

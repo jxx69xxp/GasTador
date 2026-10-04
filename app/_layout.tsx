@@ -1,4 +1,5 @@
 import { SQLiteProvider } from 'expo-sqlite';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -8,6 +9,7 @@ import { initDatabase, DB_NAME } from '../lib/db/database';
 import { DbProvider, NativeDbProvider, WebDbProvider } from '../lib/db/DbContext';
 import Colors from '../constants/Colors';
 import { AnimatedSplash } from '../components/AnimatedSplash';
+import { ThemeProvider, useTheme } from '../components/theme';
 import { AuthProvider, useAuth } from '../lib/auth';
 
 // Keep the native splash up until we know whether to show login or the dashboard (no blank flash);
@@ -22,7 +24,7 @@ function SplashGate() {
 function Loading() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.primary }}>
-      <ActivityIndicator size="large" color={Colors.white} />
+      <ActivityIndicator size="large" color={Colors.onPrimary} />
     </View>
   );
 }
@@ -31,18 +33,29 @@ const modalOptions = (title: string) => ({
   presentation: 'modal' as const,
   headerShown: true,
   title,
-  headerStyle: { backgroundColor: Colors.white },
+  headerStyle: { backgroundColor: Colors.surface },
   headerTintColor: Colors.textPrimary,
   headerTitleStyle: { fontWeight: '800' as const },
   headerShadowVisible: false,
 });
 
 function AppScreens() {
+  const { scheme } = useTheme();
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   return (
+    <NavThemeProvider value={{
+      ...base,
+      colors: { ...base.colors, primary: Colors.primary, background: Colors.screenBg, card: Colors.surface, text: Colors.textPrimary, border: Colors.border },
+    }}>
+    <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="mode" />
       <Stack.Screen name="login" />
+      <Stack.Screen
+        name="plan"
+        options={{ ...modalOptions('Plan'), presentation: 'card', headerBackTitle: 'Back', contentStyle: { backgroundColor: Colors.screenBg } }}
+      />
       <Stack.Screen
         name="settings"
         options={{ ...modalOptions('Settings'), presentation: 'card', headerBackTitle: 'Home', contentStyle: { backgroundColor: Colors.screenBg } }}
@@ -51,6 +64,7 @@ function AppScreens() {
       <Stack.Screen name="modal/add-account"     options={modalOptions('Add Account')} />
       <Stack.Screen name="modal/add-budget"       options={modalOptions('Set Budget')} />
     </Stack>
+    </NavThemeProvider>
   );
 }
 
@@ -60,7 +74,6 @@ function NativeRoot() {
     <Suspense fallback={<Loading />}>
       <SQLiteProvider databaseName={DB_NAME} onInit={initDatabase} useSuspense>
         <NativeDbProvider>
-          <StatusBar style="dark" />
           <AppScreens />
         </NativeDbProvider>
       </SQLiteProvider>
@@ -72,7 +85,6 @@ function NativeRoot() {
 function WebRoot() {
   return (
     <WebDbProvider>
-      <StatusBar style="dark" />
       <AppScreens />
     </WebDbProvider>
   );
@@ -82,9 +94,11 @@ const Root = Platform.OS === 'web' ? WebRoot : NativeRoot;
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <Root />
-      <SplashGate />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Root />
+        <SplashGate />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

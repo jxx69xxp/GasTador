@@ -20,6 +20,7 @@ import {
 import Colors from '../../constants/Colors';
 import { getActiveProfile, getCategories, upsertBudget } from '../../lib/db/queries';
 import type { Category } from '../../lib/types';
+import { themed } from '../../components/theme';
 
 const NOW = new Date();
 
@@ -80,7 +81,7 @@ export default function AddBudgetModal() {
               style={[styles.chip, selectedCategory === cat.id && { backgroundColor: cat.color }]}
               onPress={() => setSelectedCategory(cat.id)}
             >
-              <Text style={[styles.chipLabel, selectedCategory === cat.id && { color: Colors.white }]}>
+              <Text style={[styles.chipLabel, selectedCategory === cat.id && { color: Colors.onPrimary }]}>
                 {cat.icon} {cat.name}
               </Text>
             </TouchableOpacity>
@@ -118,7 +119,7 @@ export default function AddBudgetModal() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.screenBg },
   scroll: { padding: 20 },
   monthNote: {
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
   },
   chipLabel: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
   input: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -162,5 +163,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 28,
   },
-  saveBtnLabel: { color: Colors.white, fontSize: 16, fontWeight: '700' },
-});
+  saveBtnLabel: { color: Colors.onPrimary, fontSize: 16, fontWeight: '700' },
+}));

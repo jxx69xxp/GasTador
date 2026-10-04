@@ -11,6 +11,8 @@ import type {
   Account, Budget, Category, DailySummary,
   NetWorth, Profile, Transaction, TransactionType,
 } from '../types';
+import { countTransactions, SNAPSHOT_SCHEMA, validateSnapshot, type Snapshot } from './snapshot';
+export { countTransactions, SNAPSHOT_SCHEMA, validateSnapshot, type Snapshot };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -43,6 +45,17 @@ export async function createAccount(
   return r.lastInsertRowId;
 }
 
+export async function updateAccount(
+  db: SQLiteDatabase,
+  accountId: number,
+  data: { name: string; type: Account['type']; balance: number; color: string; icon: string }
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE accounts SET name = ?, type = ?, balance = ?, color = ?, icon = ? WHERE id = ?`,
+    data.name, data.type, fmt(data.balance), data.color, data.icon, accountId
+  );
+}
+
 export async function updateAccountBalance(
   db: SQLiteDatabase,
   accountId: number,
@@ -66,7 +79,9 @@ export async function getNetWorth(db: SQLiteDatabase, profileId: number): Promis
   let assets = 0, liabilities = 0;
   for (const r of rows) {
     if (r.type === 'credit_card' || r.type === 'loan') {
-      liabilities += r.balance < 0 ? Math.abs(r.balance) : 0;
+      // debts count as owed whichever sign was entered (people type loans as +50000 or -50000)
+      // ponytail: a card overpaid into credit also counts as owed; split sign handling if that shows up
+      liabilities += Math.abs(r.balance);
     } else {
       assets += r.balance > 0 ? r.balance : 0;
     }
@@ -338,3 +353,34 @@ export async function upsertBudget(
 export async function deleteBudget(db: SQLiteDatabase, budgetId: number): Promise<void> {
   await db.runAsync(`DELETE FROM budgets WHERE id = ?`, budgetId);
 }
+
+// ─── Backup snapshot (cloud sync) ─────────────────────────────────────────────
+
+
+
+export async function exportData(db: SQLiteDatabase): Promise<Snapshot> {
+  const tables: Snapshot['tables'] = {};
+  for (const [table, cols] of Object.entries(SNAPSHOT_SCHEMA)) {
+    tables[table] = await db.getAllAsync<Record<string, unknown>>(`SELECT ${cols.join(', ')} FROM ${table}`);
+  }
+  return { version: 1, tables };
+}
+
+/** Replace all local data with a snapshot, atomically (all-or-nothing). */
+export async function importData(db: SQLiteDatabase, snap: Snapshot): Promise<void> {
+  validateSnapshot(snap);
+  await db.withTransactionAsync(async () => {
+    // children first so foreign keys never dangle
+    for (const t of ['budgets', 'transactions', 'categories', 'accounts', 'profiles']) await db.runAsync(`DELETE FROM ${t}`);
+    for (const t of ['profiles', 'accounts', 'categories', 'transactions', 'budgets']) {
+      const cols = SNAPSHOT_SCHEMA[t];
+      for (const row of snap.tables[t] ?? []) {
+        await db.runAsync(
+          `INSERT INTO ${t} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+          ...cols.map(c => (row[c] ?? null) as string | number | null)
+        );
+      }
+    }
+  });
+}
+

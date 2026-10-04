@@ -12,6 +12,7 @@ import Colors from '../../constants/Colors';
 import { useDb } from '../../lib/db/DbContext';
 import { deleteTransaction, getActiveProfile, getTransactions, getTransactionsByDateRange } from '../../lib/db/queries';
 import type { Transaction, TransactionType } from '../../lib/types';
+import { themed } from '../../components/theme';
 
 type Filter = 'all' | TransactionType;
 const FILTERS: { id: Filter; label: string }[] = [
@@ -175,7 +176,7 @@ function DateHeader({ date, txns }: { date: string; txns: Transaction[] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 10 },
   stat: { flex: 1, padding: 12 },
   statValue: { fontSize: 15, fontWeight: '800', marginTop: 4 },
@@ -190,13 +191,13 @@ const styles = StyleSheet.create({
   legendPct: { fontSize: 13, color: Colors.textSecondary, fontWeight: '700', width: 40, textAlign: 'right' },
   legendAmt: { fontSize: 14, color: Colors.textPrimary, fontWeight: '800', minWidth: 70, textAlign: 'right' },
 
-  segment: { flexDirection: 'row', backgroundColor: Colors.white, borderRadius: 14, padding: 4, marginTop: 18, borderWidth: 1, borderColor: Colors.border },
+  segment: { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: 14, padding: 4, marginTop: 18, borderWidth: 1, borderColor: Colors.border },
   segItem: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   segActive: { backgroundColor: Colors.primary },
   segLabel: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
-  segLabelActive: { color: Colors.white },
+  segLabelActive: { color: Colors.onPrimary },
 
   dateHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 2 },
   dateLabel: { fontSize: 12, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.6 },
   dateTotal: { fontSize: 13, fontWeight: '800' },
-});
+}));

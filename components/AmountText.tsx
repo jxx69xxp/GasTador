@@ -1,15 +1,15 @@
 import React from 'react';
-import { StyleProp, Text, TextStyle } from 'react-native';
+import { StyleProp, Text, TextProps, TextStyle } from 'react-native';
 import Colors from '../constants/Colors';
 
-interface Props {
+interface Props extends Omit<TextProps, 'style'> {
   amount: number;
   style?: StyleProp<TextStyle>;
   colorCoded?: boolean; // green if positive, red if negative
   currency?: string;
 }
 
-export function AmountText({ amount, style, colorCoded = false, currency = '₱' }: Props) {
+export function AmountText({ amount, style, colorCoded = false, currency = '₱', ...rest }: Props) {
   const color = colorCoded
     ? amount >= 0 ? Colors.income : Colors.expense
     : undefined;
@@ -20,7 +20,7 @@ export function AmountText({ amount, style, colorCoded = false, currency = '₱'
   })}`;
 
   return (
-    <Text style={[{ fontWeight: '700' }, color ? { color } : null, style]}>
+    <Text {...rest} style={[{ fontWeight: '700' }, color ? { color } : null, style]}>
       {amount < 0 ? '-' : ''}{formatted}
     </Text>
   );

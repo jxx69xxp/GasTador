@@ -2,10 +2,10 @@
   "expo": {
     "name": "Paws",
     "slug": "gastador",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#A78BFA"
       },
-      "package": "com.gastador.app"
+      "package": "com.gastador.app",
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/favicon.png",

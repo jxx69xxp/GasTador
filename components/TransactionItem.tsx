@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Colors from '../constants/Colors';
 import type { Transaction } from '../lib/types';
 import { AmountText } from './AmountText';
+import { themed } from './theme';
 
 interface Props {
   txn: Transaction;
@@ -54,7 +55,7 @@ export function TransactionItem({ txn, onLongPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // flat row: lives inside a white card on Home and Log
   row: {
     flexDirection: 'row',
@@ -75,4 +76,4 @@ const styles = StyleSheet.create({
   memo: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
   sub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   amount: { fontSize: 15 },
-});
+}));

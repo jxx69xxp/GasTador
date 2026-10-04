@@ -1,19 +1,18 @@
 // MeowMeow Color Palette
-// Caring teal + warm tangerine on cream (ui-ux-pro-max "caring teal + warm orange", tuned to WCAG AA)
+// Playful fintech: bright blue actions + coral/purple/sky brand gradient (WCAG AA on light)
 
 export const Colors = {
-  primary: '#0F766E',       // Deep teal (5.5:1 with white)
-  primaryLight: '#2DD4BF',  // Bright teal
-  primaryDark: '#115E59',   // Darkest teal
-  primaryBg: '#F0FDFA',     // Soft mint bg
+  primary: '#2563EB',       // Bright blue (5.2:1 with white)
+  primaryLight: '#3B82F6',  // Bright blue
+  primaryDark: '#1E40AF',   // Deep blue
+  primaryBg: '#EFF6FF',     // Soft blue bg
 
   income: '#047857',        // Green for money in
   expense: '#DC2626',       // Red for money out
   transfer: '#2563EB',      // Blue for transfers
 
   gold: '#E6A817',          // Accent / highlight
-  accent: '#C2410C',        // Tangerine, AA as text on cream (4.9:1)
-  cream: '#FFF7ED',         // Login / brand background
+  brandPurple: '#A78BFA',   // Gradient mid-stop, splash bg
   ink: '#1F2937',           // Mascot outline / headings
   white: '#FFFFFF',
   offWhite: '#F8FAFC',

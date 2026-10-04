@@ -14,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0F766E"
+        "backgroundColor": "#A78BFA"
       },
       "package": "com.gastador.app"
     },
@@ -37,7 +37,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#0F766E"
+          "backgroundColor": "#A78BFA"
         }
       ]
     ],

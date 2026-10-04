@@ -1,5 +1,5 @@
 """
-MeowMeow brand generator — regenerates the cat mascot, app icons, splash and login hero art from code.
+MeowMeow brand generator — regenerates the cat mascot, app icons, splash and hero art from code.
 Run: python3 scripts/make-logo.py   (needs Pillow)
 """
 from PIL import Image, ImageDraw
@@ -7,19 +7,21 @@ from PIL import Image, ImageDraw
 SS = 3  # supersampling for smooth edges
 INK, WHITE = (31, 41, 55, 255), (255, 255, 255, 255)        # #1F2937 outline
 PINK, ORANGE, GOLD = (249, 168, 212, 255), (251, 146, 60, 255), (251, 191, 36, 255)
-TEAL_TOP, TEAL_BOTTOM = (45, 212, 191), (15, 118, 110)       # #2DD4BF -> #0F766E
-MINT_TOP, MINT_BOTTOM = (153, 246, 228), (45, 212, 191)       # arch window #99F6E4 -> #2DD4BF
-CREAM, TANGERINE, PEACH = (255, 247, 237, 255), (251, 146, 60, 255), (253, 186, 116, 255)
+CORAL, PURPLE, SKY = (251, 113, 133), (167, 139, 250), (56, 189, 248)  # gradient stops
 
 
-def gradient(w, h, top=TEAL_TOP, bottom=TEAL_BOTTOM):
-    """Vertical two-stop gradient."""
-    img = Image.new('RGBA', (w, h))
-    d = ImageDraw.Draw(img)
+def gradient(w, h):
+    """Coral (bottom-left) -> purple -> sky (top-right)."""
+    def lerp(a, b, t):
+        return tuple(round(x + (y - x) * t) for x, y in zip(a, b))
+    data = []
     for y in range(h):
-        t = y / (h - 1)
-        d.line((0, y, w, y), fill=tuple(round(a + (b - a) * t) for a, b in zip(top, bottom)) + (255,))
-    return img
+        for x in range(w):
+            t = (x / (w - 1) + 1 - y / (h - 1)) / 2
+            data.append(lerp(CORAL, PURPLE, t * 2) if t < .5 else lerp(PURPLE, SKY, t * 2 - 1))
+    img = Image.new('RGB', (w, h))
+    img.putdata(data)
+    return img.convert('RGBA')
 
 
 def cat(size, s, cx, cy, body=False):
@@ -73,52 +75,14 @@ def rounded(img, radius_frac=0.225):
     return out
 
 
-def paw(d, x, y, r, fill):
-    """Paw print: main pad + four toes. r = main pad radius."""
-    d.ellipse((x - r, y - r * 0.8, x + r, y + r * 0.8), fill=fill)
-    for dx, dy in ((-1.05, -1.05), (-0.38, -1.55), (0.38, -1.55), (1.05, -1.05)):
-        d.ellipse((x + dx * r - r * 0.36, y + dy * r - r * 0.42, x + dx * r + r * 0.36, y + dy * r + r * 0.42), fill=fill)
-
-
 def hero(w, h):
-    """Login hero: cat sitting on a cushion inside a mint arch window, coins + paw prints around it, on cream."""
-    img = Image.new('RGBA', (w, h), CREAM)
-    S = lambda *v: [round(c * SS) for c in v]
-
-    # arch window (mint gradient), clipped by an arch-shaped mask
-    x0, x1, top, bottom = w * 0.2, w * 0.8, h * 0.05, h * 0.9
-    aw = x1 - x0
-    mask = Image.new('L', (w * SS, h * SS), 0)
-    md = ImageDraw.Draw(mask)
-    md.ellipse(S(x0, top, x1, top + aw), fill=255)
-    md.rounded_rectangle(S(x0, top + aw / 2 - 40, x1, bottom), radius=40 * SS, fill=255)  # corners hide under the dome
-    window = gradient(w, h, MINT_TOP, MINT_BOTTOM)
-    wd = ImageDraw.Draw(window)
-    for px, py, pr in ((0.33, 0.3, 22), (0.68, 0.18, 18), (0.71, 0.7, 22), (0.3, 0.68, 18)):  # faint paws inside
-        paw(wd, w * px, h * py, pr, (255, 255, 255, 90))
-    img.paste(window, (0, 0), mask.resize((w, h), Image.LANCZOS))
-
-    # coins + paw prints scattered on the cream
-    deco = Image.new('RGBA', (w * SS, h * SS), (0, 0, 0, 0))
-    dd = ImageDraw.Draw(deco)
-    for cx, cy, r in ((0.09, 0.34, 0.045), (0.9, 0.2, 0.055), (0.91, 0.6, 0.035), (0.12, 0.62, 0.03)):
-        R, lw = w * r * SS, round(w * 0.007 * SS)
-        X, Y = w * cx * SS, h * cy * SS
-        dd.ellipse((X - R, Y - R, X + R, Y + R), fill=GOLD, outline=INK, width=lw)
-        dd.ellipse((X - R * 0.55, Y - R * 0.55, X + R * 0.55, Y + R * 0.55), outline=(217, 119, 6, 255), width=round(lw * 0.7))
-    for px, py, pr in ((0.07, 0.86, 16), (0.93, 0.83, 13), (0.85, 0.42, 11)):
-        paw(dd, w * px * SS, h * py * SS, pr * SS, PEACH)
-    img.alpha_composite(deco.resize((w, h), Image.LANCZOS))
-
-    # the cat (body ends inside the cushion), then the cushion in front of it
-    s = w * 0.15
-    img.alpha_composite(cat((w, round(h * 0.95)), s, w / 2, h * 0.5, body=True), (0, 0))
-    cush = Image.new('RGBA', (w * SS, h * SS), (0, 0, 0, 0))
-    cd = ImageDraw.Draw(cush)
-    cd.rounded_rectangle(S(w * 0.14, h * 0.82, w * 0.86, h * 0.97), radius=h * 0.075 * SS, fill=TANGERINE,
-                         outline=INK, width=round(s * 0.07 * SS))
-    cd.rounded_rectangle(S(w * 0.22, h * 0.845, w * 0.78, h * 0.865), radius=h * 0.01 * SS, fill=PEACH)  # highlight
-    img.alpha_composite(cush.resize((w, h), Image.LANCZOS))
+    """Gradient with a white wave rising from the bottom-right (login hero background)."""
+    img = gradient(w, h)
+    m = Image.new('L', (w * SS, h * SS), 0)
+    md = ImageDraw.Draw(m)
+    md.ellipse((w * 0.05 * SS, h * 0.62 * SS, w * 1.75 * SS, h * 1.6 * SS), fill=255)   # big right swell
+    md.ellipse((-w * 0.6 * SS, h * 0.9 * SS, w * 0.7 * SS, h * 1.4 * SS), fill=255)     # low left
+    img.paste(Image.new('RGBA', (w, h), WHITE), (0, 0), m.resize((w, h), Image.LANCZOS))
     return img
 
 
@@ -128,8 +92,9 @@ if __name__ == '__main__':
     icon.alpha_composite(cat((1024, 1024), 300, 512, 512 + 57))
     icon.save('assets/icon.png')                                              # iOS masks corners itself
     cat((1024, 1024), 215, 512, 512 + 41).save('assets/adaptive-icon.png')    # Android 66% safe zone
-    cat((1024, 1024), 380, 512, 512 + 72).save('assets/splash-icon.png')      # on teal splash bg
+    cat((1024, 1024), 380, 512, 512 + 72).save('assets/splash-icon.png')      # on purple splash bg
     rounded(icon).save('assets/logo.png')
     rounded(icon).resize((48, 48), Image.LANCZOS).save('assets/favicon.png')
-    hero(1200, 1100).save('assets/hero.png')                                  # login hero (cat included)
+    cat((1000, 1000), 270, 500, 360, body=True).save('assets/cat.png')        # login mascot
+    hero(1206, 1400).save('assets/hero-bg.png')
     print('assets written')

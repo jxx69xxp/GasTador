@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import Colors from '../../constants/Colors';
+import { formatAmountInput, parseAmount } from '../../lib/amount';
 import { getActiveProfile, getCategories, upsertBudget } from '../../lib/db/queries';
 import type { Category } from '../../lib/types';
 import { themed } from '../../components/theme';
@@ -42,7 +43,7 @@ export default function AddBudgetModal() {
   useEffect(() => { load(); }, [load]);
 
   const handleSave = useCallback(async () => {
-    const amt = parseFloat(amount);
+    const amt = parseAmount(amount);
     if (!amount || isNaN(amt) || amt <= 0) {
       Alert.alert('Invalid Amount', 'Please enter a budget amount greater than 0.');
       return;
@@ -93,7 +94,7 @@ export default function AddBudgetModal() {
         <TextInput
           style={styles.input}
           value={amount}
-          onChangeText={setAmount}
+          onChangeText={v => setAmount(formatAmountInput(v))}
           placeholder="e.g. 5000"
           keyboardType="decimal-pad"
           placeholderTextColor={Colors.textMuted}

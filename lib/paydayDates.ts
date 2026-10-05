@@ -29,3 +29,7 @@ export function daysUntilPayday(days: number[], from: Date): { days: number; dat
   const next = upcomingPaydays(days, new Date(startOfToday.getTime() - 1), 2, 0)[0];
   return { days: Math.round((next.getTime() - startOfToday.getTime()) / 864e5), date: next };
 }
+
+/** Local calendar date as YYYY-MM-DD. Use this, not toISOString(), which is UTC (wrong day before 8 AM in PH). */
+export const localISO = (d: Date = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

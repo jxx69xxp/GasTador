@@ -4,11 +4,12 @@
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useDb } from '../../lib/db/DbContext';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -19,16 +20,27 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { AmountKeypad } from '../../components/AmountKeypad';
+import { currentScheme } from '../../constants/Colors';
 import { shadow } from '../../components/ui';
+import { evaluate, formatExpression, hasOperator } from '../../lib/amount';
 import Colors from '../../constants/Colors';
 import { getAccounts, getActiveProfile, getBudgets, getCategories, postTransaction } from '../../lib/db/queries';
 import { notifyBudget } from '../../lib/notifications';
 import type { Account, Category, TransactionType } from '../../lib/types';
 import { themed } from '../../components/theme';
+import { localISO } from '../../lib/paydayDates';
+import { CategoryIcon } from '../../components/CategoryIcon';
 
-const TODAY = new Date().toISOString().slice(0, 10);
 
 // a function so the colors follow the active theme
+const prettyDate = (iso: string) => {
+  const d = new Date(`${iso}T12:00:00`);
+  const today = localISO();
+  return iso === today ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 const typeOptions = (): { id: TransactionType; label: string; color: string }[] => [
   { id: 'expense', label: 'Expense', color: Colors.expense },
   { id: 'income', label: 'Income', color: Colors.income },
@@ -37,10 +49,14 @@ const typeOptions = (): { id: TransactionType; label: string; color: string }[] 
 
 export default function AddTransactionModal() {
   const db = useDb();
-  const [type, setType] = useState<TransactionType>('expense');
-  const [amount, setAmount] = useState('');
-  const [memo, setMemo] = useState('');
-  const [date, setDate] = useState(TODAY);
+  const params = useLocalSearchParams<{ type?: string; amount?: string; memo?: string; category?: string; date?: string }>();
+  const [type, setType] = useState<TransactionType>(
+    params.type === 'income' || params.type === 'transfer' ? params.type : 'expense');
+  const [amount, setAmount] = useState(() => (Number(params.amount) > 0 ? String(params.amount) : ''));          // raw calculator expression, e.g. "1200+300"
+  const [pickDate, setPickDate] = useState(false);
+  const [keypad, setKeypad] = useState(false); // opens only when the amount is tapped
+  const [memo, setMemo] = useState(params.memo ?? '');
+  const [date, setDate] = useState(() => (params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) && params.date <= localISO() ? params.date : localISO()));
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<number | null>(null);
@@ -58,18 +74,20 @@ export default function AddTransactionModal() {
     ]);
     setAccounts(accs);
     setCategories(cats);
-    if (accs.length > 0) setSelectedAccount(accs[0].id);
-    if (accs.length > 1) setSelectedToAccount(accs[1].id);
+    if (params.category) setSelectedCategory(cur => cur ?? cats.find(c => c.name === params.category)?.id ?? null);
+    setSelectedAccount(cur => cur ?? accs[0]?.id ?? null);
+    setSelectedToAccount(cur => cur ?? accs[1]?.id ?? null);
   }, [db]);
 
-  useEffect(() => { load(); }, [load]);
+  // refocus reload: picks up a wallet added from the "No wallets yet" link
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const filteredCategories = categories.filter(c =>
     type === 'income' ? c.type === 'income' : c.type === 'expense'
   );
 
   const handleSave = useCallback(async () => {
-    const amt = parseFloat(amount);
+    const amt = evaluate(amount) ?? NaN;
     if (!amount || isNaN(amt) || amt <= 0) {
       Alert.alert('Invalid Amount', 'Please enter a valid amount greater than 0.');
       return;
@@ -148,17 +166,17 @@ export default function AddTransactionModal() {
         {/* Amount */}
         <View style={styles.amountRow}>
           <Text style={styles.currency}>₱</Text>
-          <TextInput
-            style={styles.amount}
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="0"
-            keyboardType="decimal-pad"
-            placeholderTextColor={Colors.border}
-            accessibilityLabel="Amount in pesos"
-            autoFocus
-          />
+          <TouchableOpacity onPress={() => { Keyboard.dismiss(); setPickDate(false); setKeypad(true); }} accessibilityRole="button" accessibilityLabel={`Amount ${formatExpression(amount) || 'zero'} pesos. Opens calculator`}>
+            <Text style={[styles.amount, !amount && { color: Colors.border }]} numberOfLines={1} adjustsFontSizeToFit>
+              {formatExpression(amount) || '0'}
+            </Text>
+          </TouchableOpacity>
         </View>
+        {/* always rendered so the keypad doesn't jump under your finger when the result appears */}
+        <Text style={styles.calcResult} accessibilityLiveRegion="polite">
+          {hasOperator(amount) && evaluate(amount) != null ? `= ₱${(evaluate(amount) ?? 0).toLocaleString('en-PH', { maximumFractionDigits: 2 })}` : ' '}
+        </Text>
+        {keypad && <AmountKeypad value={amount} onChange={setAmount} onDone={() => setKeypad(false)} />}
 
         {/* Note */}
         <View style={styles.noteBox}>
@@ -168,6 +186,7 @@ export default function AddTransactionModal() {
             value={memo}
             onChangeText={setMemo}
             placeholder="Add a note…"
+            onFocus={() => setKeypad(false)}
             placeholderTextColor={Colors.textMuted}
             accessibilityLabel="Note"
           />
@@ -189,7 +208,7 @@ export default function AddTransactionModal() {
                     accessibilityState={{ selected: on }}
                   >
                     <View style={[styles.chipIcon, { backgroundColor: cat.color + '26' }]}>
-                      <Text style={{ fontSize: 14 }}>{cat.icon}</Text>
+                      <CategoryIcon emoji={cat.icon} size={16} color={cat.color} />
                     </View>
                     <Text style={styles.chipLabel}>{cat.name}</Text>
                   </TouchableOpacity>
@@ -201,7 +220,12 @@ export default function AddTransactionModal() {
 
         {/* Account(s) */}
         <Text style={styles.label}>{type === 'transfer' ? 'FROM ACCOUNT' : 'ACCOUNT'}</Text>
-        <AccountChips accounts={accounts} selected={selectedAccount} onSelect={setSelectedAccount} />
+        {accounts.length === 0 ? (
+          <TouchableOpacity style={styles.noAccount} onPress={() => router.push('/modal/add-account')} accessibilityRole="button">
+            <Ionicons name="wallet-outline" size={20} color={Colors.primary} />
+            <Text style={styles.noAccountText}>No wallets yet. Tap to add one first.</Text>
+          </TouchableOpacity>
+        ) : <AccountChips accounts={accounts} selected={selectedAccount} onSelect={setSelectedAccount} />}
         {type === 'transfer' && (
           <>
             <Text style={styles.label}>TO ACCOUNT</Text>
@@ -215,17 +239,29 @@ export default function AddTransactionModal() {
 
         {/* Date */}
         <Text style={styles.label}>LOGGED AT</Text>
-        <View style={styles.noteBox}>
+        <TouchableOpacity
+          style={styles.noteBox}
+          onPress={() => { setKeypad(false); setPickDate(v => !v); }}
+          accessibilityRole="button"
+          accessibilityLabel={`Date ${prettyDate(date)}. Change date`}
+        >
           <Ionicons name="calendar-outline" size={20} color={Colors.textMuted} />
-          <TextInput
-            style={styles.note}
-            value={date}
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={Colors.textMuted}
-            accessibilityLabel="Date, format year month day"
+          <Text style={[styles.note, { paddingVertical: 14 }]}>{prettyDate(date)}</Text>
+          <Ionicons name={pickDate ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textMuted} />
+        </TouchableOpacity>
+        {pickDate && (
+          <DateTimePicker
+            value={new Date(`${date}T12:00:00`)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            maximumDate={new Date()}
+            themeVariant={currentScheme()}
+            onChange={(e, d) => {
+              if (Platform.OS === 'android') setPickDate(false); // Android shows a dialog that closes itself
+              if (e.type === 'set' && d) setDate(localISO(d));
+            }}
           />
-        </View>
+        )}
       </ScrollView>
 
       {/* Bottom bar */}
@@ -233,7 +269,7 @@ export default function AddTransactionModal() {
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>{type === 'transfer' ? 'FROM' : 'ACCOUNT'}</Text>
           <Text style={styles.accountName} numberOfLines={1}>
-            {fromAccount ? `${fromAccount.icon} ${fromAccount.name}` : 'Pick an account'}
+            {fromAccount ? fromAccount.name : 'Pick an account'}
           </Text>
         </View>
         <TouchableOpacity
@@ -265,7 +301,7 @@ function AccountChips({ accounts, selected, onSelect }: {
             accessibilityState={{ selected: on }}
           >
             <View style={[styles.chipIcon, { backgroundColor: acc.color + '26' }]}>
-              <Text style={{ fontSize: 14 }}>{acc.icon}</Text>
+              <CategoryIcon emoji={acc.icon} size={16} color={acc.color} />
             </View>
             <Text style={styles.chipLabel}>{acc.name}</Text>
           </TouchableOpacity>
@@ -280,11 +316,12 @@ const styles = themed(() => StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
   close: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', ...shadow },
   segment: { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: Colors.border },
-  segItem: { minHeight: 38, paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  segItem: { minHeight: 44, paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   segLabel: { fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
 
   scroll: { paddingHorizontal: 18, paddingBottom: 24 },
   amountRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 18 },
+  calcResult: { textAlign: 'center', fontSize: 16, fontWeight: '700', color: Colors.textSecondary, marginTop: -10, marginBottom: 8 },
   currency: { fontSize: 28, fontWeight: '700', color: Colors.textMuted, marginRight: 6 },
   amount: { fontSize: 56, fontWeight: '800', color: Colors.textPrimary, minWidth: 80, textAlign: 'center' },
 
@@ -294,7 +331,9 @@ const styles = themed(() => StyleSheet.create({
   },
   note: { flex: 1, fontSize: 16, color: Colors.textPrimary, paddingVertical: 12 },
 
-  label: { fontSize: 11, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8, marginTop: 20, marginBottom: 10 },
+  label: { fontSize: 12, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8, marginTop: 20, marginBottom: 10 },
+  noAccount: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: Colors.primary },
+  noAccountText: { color: Colors.primary, fontSize: 15, fontWeight: '700' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingLeft: 6, paddingRight: 12,

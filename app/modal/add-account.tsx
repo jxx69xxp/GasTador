@@ -17,9 +17,11 @@ import {
   View,
 } from 'react-native';
 import Colors from '../../constants/Colors';
+import { formatAmountInput, parseAmount } from '../../lib/amount';
 import { createAccount, deleteAccount, getAccounts, getActiveProfile, updateAccount } from '../../lib/db/queries';
 import type { Account } from '../../lib/types';
 import { themed } from '../../components/theme';
+import { CategoryIcon } from '../../components/CategoryIcon';
 
 const ACCOUNT_TYPES: { id: Account['type']; label: string; icon: string; color: string }[] = [
   { id: 'cash',        label: 'Cash',        icon: '💵', color: Colors.cash },
@@ -52,7 +54,7 @@ export default function AddAccountModal() {
       const p = await getActiveProfile(db);
       const acc = p && (await getAccounts(db, p.id)).find(a => a.id === editId);
       if (!acc) return;
-      setName(acc.name); setType(acc.type); setBalance(String(acc.balance)); setColor(acc.color); setIcon(acc.icon);
+      setName(acc.name); setType(acc.type); setBalance(formatAmountInput(String(acc.balance), true)); setColor(acc.color); setIcon(acc.icon);
     })();
   }, [db, editId]);
 
@@ -67,7 +69,7 @@ export default function AddAccountModal() {
       Alert.alert('Name Required', 'Please enter an account name.');
       return;
     }
-    const bal = balance.trim() === '' ? 0 : Number(balance);
+    const bal = balance.trim() === '' ? 0 : parseAmount(balance);
     if (!Number.isFinite(bal)) {
       Alert.alert('Invalid Balance', 'Enter a number, e.g. 1500 or -250.50.');
       return;
@@ -114,7 +116,7 @@ export default function AddAccountModal() {
               style={[styles.typeCard, type === t.id && { borderColor: t.color, borderWidth: 2 }]}
               onPress={() => handleTypeSelect(t)}
             >
-              <Text style={styles.typeIcon}>{t.icon}</Text>
+              <CategoryIcon emoji={t.icon} size={26} color={t.color} />
               <Text style={[styles.typeLabel, type === t.id && { color: t.color }]}>{t.label}</Text>
             </TouchableOpacity>
           ))}
@@ -136,7 +138,7 @@ export default function AddAccountModal() {
         <TextInput
           style={styles.input}
           value={balance}
-          onChangeText={setBalance}
+          onChangeText={v => setBalance(formatAmountInput(v, true))}
           placeholder="0.00"
           keyboardType="decimal-pad"
           placeholderTextColor={Colors.textMuted}
@@ -162,7 +164,7 @@ export default function AddAccountModal() {
             <Text style={styles.previewType}>{selectedType.label}</Text>
           </View>
           <Text style={[styles.previewBalance, { color }]}>
-            ₱{(parseFloat(balance) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+            ₱{(parseAmount(balance) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
           </Text>
         </View>
 

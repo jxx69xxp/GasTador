@@ -4,6 +4,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { upcomingPaydays } from './paydayDates';
+import { localISO } from './paydayDates';
 
 const native = Platform.OS !== 'web';
 
@@ -40,7 +41,7 @@ export async function schedulePaydays(days: number[]) {
   if (!granted) return;
   for (const date of upcomingPaydays(days, new Date())) {
     await Notifications.scheduleNotificationAsync({
-      identifier: `payday-${date.toISOString().slice(0, 10)}`,
+      identifier: `payday-${localISO(date)}`,
       content: { title: 'Payday! 💰', body: 'Sweldo day! Log your salary in Paws and pay yourself first.' },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
     });

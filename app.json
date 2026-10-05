@@ -2,7 +2,7 @@
   "expo": {
     "name": "Paws",
     "slug": "gastador",
-    "version": "1.0.2",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -17,7 +17,7 @@
         "backgroundColor": "#A78BFA"
       },
       "package": "com.gastador.app",
-      "versionCode": 3
+      "versionCode": 5
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -39,6 +39,15 @@
           "imageWidth": 220,
           "resizeMode": "contain",
           "backgroundColor": "#A78BFA"
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Paws uses the camera to scan receipts.",
+          "photosPermission": "Paws reads receipts from your photos.",
+          "microphonePermission": false
         }
       ]
     ],

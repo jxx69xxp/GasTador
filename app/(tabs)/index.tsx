@@ -10,19 +10,19 @@ import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmountText } from '../../components/AmountText';
 import { TransactionItem } from '../../components/TransactionItem';
-import { CatTip, EmptyState, Fab, shadow } from '../../components/ui';
+import { AddMenu, CatTip, EmptyState, shadow } from '../../components/ui';
 import Colors from '../../constants/Colors';
 import { useAuth } from '../../lib/auth';
 import { useDb } from '../../lib/db/DbContext';
 import {
   deleteTransaction, getActiveProfile, getMonthlySummary, getTransactions, getTransactionsByDateRange,
 } from '../../lib/db/queries';
-import { daysUntilPayday } from '../../lib/paydayDates';
+import { daysUntilPayday, localISO } from '../../lib/paydayDates';
 import { monthEndProjection } from '../../lib/projection';
 import type { DailySummary, Transaction } from '../../lib/types';
 import { themed } from '../../components/theme';
 
-const iso = (d: Date) => d.toISOString().slice(0, 10); // same date convention as the rest of the app
+const iso = localISO;
 
 function greeting(now: Date) {
   const h = now.getHours();
@@ -189,7 +189,7 @@ export default function DashboardScreen() {
         </TouchableOpacity>
 
         {/* ── Projection ── */}
-        <TouchableOpacity style={styles.monthCard} onPress={() => router.push('/plan')} accessibilityRole="button" accessibilityHint="Opens your spending and debt plan">
+        <TouchableOpacity style={styles.monthCard} onPress={() => router.push('/debt')} accessibilityRole="button" accessibilityHint="Opens your spending and debt plan">
           <View style={styles.monthIcon}>
             <Ionicons name="trending-up-outline" size={20} color={Colors.primary} />
           </View>
@@ -201,7 +201,7 @@ export default function DashboardScreen() {
         </TouchableOpacity>
 
         {/* ── Month balance ── */}
-        <TouchableOpacity style={styles.monthCard} onPress={() => router.push('/(tabs)/budgets')} accessibilityRole="button">
+        <TouchableOpacity style={styles.monthCard} onPress={() => router.push('/budgets')} accessibilityRole="button">
           <View style={styles.monthIcon}>
             <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
           </View>
@@ -217,7 +217,7 @@ export default function DashboardScreen() {
 
         {/* ── Recent activity ── */}
         <View style={styles.listCard}>
-          <View style={styles.listHeader}>
+          <TouchableOpacity style={styles.listHeader} onPress={() => router.push('/(tabs)/transactions')} accessibilityRole="button" accessibilityLabel="Recent activity. See all">
             <View style={styles.monthIcon}>
               <Ionicons name="receipt-outline" size={20} color={Colors.primary} />
             </View>
@@ -225,10 +225,8 @@ export default function DashboardScreen() {
               <Text style={styles.listTitle}>Recent activity</Text>
               <Text style={styles.listSub}>Your latest income and expenses</Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/transactions')} accessibilityRole="button">
-              <Text style={styles.seeAll}>See all</Text>
-            </TouchableOpacity>
-          </View>
+            <Text style={styles.seeAll}>See all</Text>
+          </TouchableOpacity>
           {recent.length === 0
             ? <EmptyState icon="receipt-outline" text={'No transactions yet.\nTap “+ Expense” to log your first one.'} />
             : recent.map(txn => <TransactionItem key={txn.id} txn={txn} onLongPress={() => handleDeleteTxn(txn)} />)}
@@ -237,7 +235,7 @@ export default function DashboardScreen() {
         <View style={{ height: 96 }} />
       </ScrollView>
 
-      <Fab label="Expense" onPress={() => router.push('/modal/add-transaction')} />
+      <AddMenu />
     </View>
   );
 }
@@ -271,14 +269,14 @@ const styles = themed(() => StyleSheet.create({
 
   row: { flexDirection: 'row', gap: 12, marginTop: 14 },
   card: { backgroundColor: Colors.surface, borderRadius: 18, padding: 14, minHeight: 132, ...shadow },
-  cardLabel: { fontSize: 11, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8 },
+  cardLabel: { fontSize: 12, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8 },
   bigAmount: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary },
 
   chart: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginTop: 10 },
   barCol: { flex: 1, alignItems: 'center', height: '100%' },
   barTrack: { flex: 1, width: 8, justifyContent: 'flex-end' },
   bar: { width: '100%', borderRadius: 4 },
-  barLabel: { fontSize: 11, color: Colors.textMuted, marginTop: 4, fontWeight: '600' },
+  barLabel: { fontSize: 12, color: Colors.textMuted, marginTop: 4, fontWeight: '600' },
 
   paydayCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, padding: 14, borderRadius: 18,

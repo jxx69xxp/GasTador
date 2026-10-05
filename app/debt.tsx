@@ -1,5 +1,5 @@
 /**
- * Paws — Plan: spending projection, debt payoff timeline (loans + credit cards), and Paws' advice.
+ * Paws — Debt (Plan → Debt): spending projection, debt payoff timeline (loans + credit cards), and Paws' advice.
  * Salary + per-debt payment/interest are saved on the phone (AsyncStorage key paws.plan).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,11 +10,14 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { themed } from '../components/theme';
 import { CatTip, EmptyState, ui } from '../components/ui';
 import Colors from '../constants/Colors';
+import { formatAmountInput } from '../lib/amount';
 import { useDb } from '../lib/db/DbContext';
 import { getAccounts, getActiveProfile, getTransactionsByDateRange } from '../lib/db/queries';
 import {
   addMonths, advice, monthEndProjection, monthsToPayoff, payoffPlan, type Debt, type Strategy,
 } from '../lib/projection';
+import { localISO } from '../lib/paydayDates';
+import { CategoryIcon } from '../components/CategoryIcon';
 
 const KEY = 'paws.plan';
 type Saved = { salary: string; debts: Record<number, { payment: string; apr: string }> };
@@ -25,7 +28,7 @@ const when = (months: number) => Number.isFinite(months)
   ? `${months} month${months === 1 ? '' : 's'} · ${addMonths(new Date(), months).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
   : 'Never at this payment';
 
-export default function PlanScreen() {
+export default function DebtScreen() {
   const db = useDb();
   const [saved, setSaved] = useState<Saved>({ salary: '', debts: {} });
   const [debtAccounts, setDebtAccounts] = useState<{ id: number; name: string; icon: string; owed: number }[]>([]);
@@ -39,8 +42,8 @@ export default function PlanScreen() {
     const p = await getActiveProfile(db);
     if (!p) return;
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
-    const from = new Date(now.getTime() - 89 * 864e5).toISOString().slice(0, 10);
+    const today = localISO(now);
+    const from = localISO(new Date(now.getTime() - 89 * 864e5));
     const [accounts, txns] = await Promise.all([getAccounts(db, p.id), getTransactionsByDateRange(db, p.id, from, today)]);
 
     // loans/cards: whatever the sign the user entered, the size of the balance is what's owed
@@ -113,7 +116,7 @@ export default function PlanScreen() {
             <TextInput
               style={styles.salaryInput}
               value={saved.salary}
-              onChangeText={v => update({ ...saved, salary: v })}
+              onChangeText={v => update({ ...saved, salary: formatAmountInput(v) })}
               placeholder="0"
               keyboardType="decimal-pad"
               placeholderTextColor={Colors.textMuted}
@@ -121,7 +124,7 @@ export default function PlanScreen() {
             />
           </View>
           {stats.avgIncome > 0 && Math.round(stats.avgIncome) !== Math.round(salary) && (
-            <TouchableOpacity onPress={() => update({ ...saved, salary: String(Math.round(stats.avgIncome)) })} accessibilityRole="button">
+            <TouchableOpacity onPress={() => update({ ...saved, salary: formatAmountInput(String(Math.round(stats.avgIncome))) })} accessibilityRole="button">
               <Text style={styles.link}>Use my logged income: {peso(stats.avgIncome)}/mo</Text>
             </TouchableOpacity>
           )}
@@ -130,14 +133,15 @@ export default function PlanScreen() {
         {/* Debts */}
         <Text style={ui.section}>LOANS & CREDIT CARDS</Text>
         {debts.length === 0 ? (
-          <EmptyState icon="happy-outline" text={'No loans or credit card balances.\nAdd one under Accounts to plan its payoff.'} />
+          <EmptyState icon="happy-outline" text={'No loans or credit card balances.\nAdd one under Wallet to plan its payoff.'} />
         ) : debtAccounts.map(a => {
           const d = debts.find(x => x.id === a.id)!;
           const months = monthsToPayoff(d.owed, d.payment, d.apr);
           return (
             <View key={a.id} style={ui.card}>
               <View style={styles.debtHead}>
-                <Text style={styles.debtName} numberOfLines={1}>{a.icon} {a.name}</Text>
+                <CategoryIcon emoji={a.icon} size={18} color={Colors.expense} />
+                <Text style={styles.debtName} numberOfLines={1}>{a.name}</Text>
                 <Text style={styles.owed}>{peso(d.owed)}</Text>
               </View>
               <View style={styles.row}>
@@ -204,7 +208,7 @@ function Field({ label, value, onChange, placeholder = '0' }: { label: string; v
   return (
     <View style={{ flex: 1 }}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput style={styles.field} value={value} onChangeText={onChange} placeholder={placeholder}
+      <TextInput style={styles.field} value={value} onChangeText={v => onChange(formatAmountInput(v))} placeholder={placeholder}
         keyboardType="decimal-pad" placeholderTextColor={Colors.textMuted} accessibilityLabel={label} />
     </View>
   );

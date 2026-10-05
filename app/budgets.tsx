@@ -1,17 +1,17 @@
 /**
- * Paws — Budgets Screen
+ * Paws — Category budget (Plan → Category budget)
  * Monthly overview, a tip from Paws, and per-category progress bars.
  */
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { BudgetBar } from '../../components/BudgetBar';
-import { CatTip, EmptyState, Fab, ScreenHeader, ui } from '../../components/ui';
-import Colors from '../../constants/Colors';
-import { useDb } from '../../lib/db/DbContext';
-import { deleteBudget, getActiveProfile, getBudgets } from '../../lib/db/queries';
-import type { Budget } from '../../lib/types';
-import { themed } from '../../components/theme';
+import { BudgetBar } from '../components/BudgetBar';
+import { CatTip, EmptyState, Fab, ui } from '../components/ui';
+import Colors from '../constants/Colors';
+import { useDb } from '../lib/db/DbContext';
+import { deleteBudget, getActiveProfile, getBudgets } from '../lib/db/queries';
+import type { Budget } from '../lib/types';
+import { themed } from '../components/theme';
 
 const peso = (n: number) => `₱${Math.round(n).toLocaleString('en-PH')}`;
 
@@ -58,14 +58,13 @@ export default function BudgetsScreen() {
 
   return (
     <View style={ui.screen}>
-      <ScreenHeader title="Budgets" subtitle={monthName} />
       <ScrollView
-        contentContainerStyle={ui.scroll}
+        contentContainerStyle={[ui.scroll, { paddingTop: 4 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         <View style={ui.card}>
-          <Text style={ui.label}>REMAINING THIS MONTH</Text>
+          <Text style={ui.label}>REMAINING IN {monthName.toUpperCase()}</Text>
           <Text style={styles.big}>{peso(Math.max(0, total - spent))}</Text>
           <View style={styles.track}>
             <View style={[styles.fill, { width: `${pct}%`, backgroundColor: spent > total ? Colors.expense : Colors.primary }]} />

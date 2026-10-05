@@ -4,7 +4,9 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, Easing, ImageStyle, StyleProp, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { router, type Href } from 'expo-router';
+import { scanReceipt } from '../lib/scan';
+import { AccessibilityInfo, Alert, Animated, Easing, ImageStyle, Modal, Pressable, StyleProp, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '../constants/Colors';
 import { themed } from './theme';
@@ -100,6 +102,60 @@ export function Fab({ label, onPress }: { label: string; onPress: () => void }) 
   );
 }
 
+const ADD_OPTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; href?: Href; color: () => string }[] = [
+  { icon: 'chatbubbles-outline', label: 'Ask Paws', href: '/chat', color: () => Colors.primary },
+  { icon: 'scan-outline', label: 'Scan receipt', color: () => Colors.textSecondary },
+  { icon: 'swap-horizontal', label: 'Transfer', href: { pathname: '/modal/add-transaction', params: { type: 'transfer' } }, color: () => Colors.transfer },
+  { icon: 'arrow-down-circle-outline', label: 'Income', href: { pathname: '/modal/add-transaction', params: { type: 'income' } }, color: () => Colors.income },
+  { icon: 'arrow-up-circle-outline', label: 'Expense', href: { pathname: '/modal/add-transaction', params: { type: 'expense' } }, color: () => Colors.expense },
+];
+
+/** "+" button that opens Chat / Scan / Transfer / Income / Expense. */
+export function AddMenu() {
+  const [open, setOpen] = React.useState(false);
+  const go = (o: (typeof ADD_OPTIONS)[number]) => {
+    setOpen(false);
+    if (o.href) { router.push(o.href); return; }
+    const run = async (src: 'camera' | 'library') => {
+      const g = await scanReceipt(src);
+      if (!g) return;
+      router.push({ pathname: '/modal/add-transaction', params: {
+        type: 'expense', amount: g.amount ? String(g.amount) : '', memo: g.merchant ?? '', date: g.date ?? '',
+      } });
+    };
+    Alert.alert('Scan receipt', 'Paws reads the total on your phone. The photo isn’t saved or uploaded.', [
+      { text: 'Take photo', onPress: () => run('camera') },
+      { text: 'Choose from gallery', onPress: () => run('library') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+  return (
+    <>
+      <TouchableOpacity style={styles.fab} onPress={() => setOpen(true)} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Add" accessibilityHint="Opens chat, scan, transfer, income and expense">
+        <Ionicons name="add" size={22} color={Colors.onPrimary} />
+        <Text style={styles.fabLabel}>Add</Text>
+      </TouchableOpacity>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel="Close menu">
+          <View style={styles.menu}>
+            {ADD_OPTIONS.map(o => (
+              <TouchableOpacity key={o.label} style={styles.menuItem} onPress={() => go(o)} accessibilityRole="button">
+                <Text style={styles.menuLabel}>{o.label}</Text>
+                <View style={[styles.menuIcon, { backgroundColor: o.color() }]}>
+                  <Ionicons name={o.icon} size={22} color={Colors.onPrimary} />
+                </View>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={[styles.fab, styles.fabClose]} onPress={() => setOpen(false)} accessibilityRole="button" accessibilityLabel="Close">
+              <Ionicons name="close" size={24} color={Colors.onPrimary} />
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
 export function EmptyState({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
   return (
     <View style={styles.empty}>
@@ -117,7 +173,7 @@ export const ui = themed(() => StyleSheet.create({
     backgroundColor: Colors.primaryBg, borderRadius: 18, padding: 16, marginTop: 14,
     borderWidth: 1, borderColor: Colors.primaryLight + '40',
   },
-  label: { fontSize: 11, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8 },
+  label: { fontSize: 12, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8 },
   section: { fontSize: 13, fontWeight: '800', color: Colors.textSecondary, letterSpacing: 0.6, marginTop: 22, marginBottom: 2 },
 }));
 
@@ -151,6 +207,12 @@ const styles = themed(() => StyleSheet.create({
     shadowColor: Colors.primary, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
   fabLabel: { color: Colors.onPrimary, fontSize: 16, fontWeight: '700' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(11,18,32,0.55)', justifyContent: 'flex-end', alignItems: 'flex-end', padding: 18 },
+  menu: { alignItems: 'flex-end', gap: 12, marginBottom: 83 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 },
+  menuLabel: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', backgroundColor: 'rgba(15,23,42,0.85)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, overflow: 'hidden' },
+  menuIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
+  fabClose: { position: 'relative', bottom: 0, right: 0, width: 56, paddingHorizontal: 0, justifyContent: 'center', marginTop: 4 },
 
   empty: { alignItems: 'center', paddingVertical: 36, gap: 10 },
   emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },

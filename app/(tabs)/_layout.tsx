@@ -72,38 +72,11 @@ export default function TabLayout() {
         headerShown: false, // every tab draws its own ScreenHeader (components/ui.tsx)
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Dashboard',
-          tabBarLabel: 'Home',
-          tabBarIcon: tabIcon('home'),
-        }}
-      />
-      <Tabs.Screen
-        name="accounts"
-        options={{
-          title: 'Accounts',
-          tabBarLabel: 'Accounts',
-          tabBarIcon: tabIcon('wallet'),
-        }}
-      />
-      <Tabs.Screen
-        name="transactions"
-        options={{
-          title: 'History',
-          tabBarLabel: 'History',
-          tabBarIcon: tabIcon('time'),
-        }}
-      />
-      <Tabs.Screen
-        name="budgets"
-        options={{
-          title: 'Budgets',
-          tabBarLabel: 'Budgets',
-          tabBarIcon: tabIcon('pie-chart'),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Dashboard', tabBarLabel: 'Home', tabBarIcon: tabIcon('home') }} />
+      <Tabs.Screen name="accounts" options={{ title: 'Wallet', tabBarLabel: 'Wallet', tabBarIcon: tabIcon('wallet') }} />
+      <Tabs.Screen name="plan" options={{ title: 'Plan', tabBarLabel: 'Plan', tabBarIcon: tabIcon('pie-chart') }} />
+      <Tabs.Screen name="insights" options={{ title: 'Insights', tabBarLabel: 'Insights', tabBarIcon: tabIcon('bar-chart') }} />
+      <Tabs.Screen name="transactions" options={{ title: 'History', tabBarLabel: 'History', tabBarIcon: tabIcon('time') }} />
     </Tabs>
   );
 }

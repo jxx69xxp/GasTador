@@ -9,6 +9,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './auth';
 import type { DbAdapter } from './db/DbAdapter';
 import { countTransactions, exportData, importData, validateSnapshot, type Snapshot } from './db/queries';
+import { validatePlanLists } from './planMath';
+import { exportPlanLists, importPlanLists } from './planStore';
+
+// the DB snapshot plus the Plan lists (goals, owed, planned payments, trips)
+type Backup = Snapshot & { lists?: Record<string, unknown> };
 
 const LAST_KEY = 'paws.lastBackup';
 
@@ -17,12 +22,12 @@ async function currentUserId() {
   return data.session?.user.id ?? null;
 }
 
-export async function getCloudBackup(): Promise<{ data: Snapshot; updatedAt: string } | null> {
+export async function getCloudBackup(): Promise<{ data: Backup; updatedAt: string } | null> {
   const uid = await currentUserId();
   if (!uid) return null;
   const { data, error } = await supabase.from('paws_backups').select('data, updated_at').eq('user_id', uid).maybeSingle();
   if (error) throw error;
-  return data ? { data: data.data as Snapshot, updatedAt: data.updated_at as string } : null;
+  return data ? { data: data.data as Backup, updatedAt: data.updated_at as string } : null;
 }
 
 /**
@@ -32,7 +37,7 @@ export async function getCloudBackup(): Promise<{ data: Snapshot; updatedAt: str
 export async function backupNow(db: DbAdapter, { auto = false } = {}): Promise<string | null> {
   const uid = await currentUserId();
   if (!uid) throw new Error('Sign in to back up your data.');
-  const snap = await exportData(db);
+  const snap: Backup = { ...(await exportData(db)), lists: await exportPlanLists() };
   if (auto && countTransactions(snap) === 0) return null;
   const at = new Date().toISOString();
   const { error } = await supabase.from('paws_backups').upsert({ user_id: uid, data: snap, updated_at: at });
@@ -46,7 +51,9 @@ export async function restoreFromCloud(db: DbAdapter): Promise<number> {
   const cloud = await getCloudBackup();
   if (!cloud) throw new Error('No backup found for this account yet.');
   validateSnapshot(cloud.data);
+  if (cloud.data.lists) validatePlanLists(cloud.data.lists); // check everything before writing anything
   await importData(db, cloud.data);
+  if (cloud.data.lists) await importPlanLists(cloud.data.lists);
   await AsyncStorage.setItem(LAST_KEY, cloud.updatedAt);
   return countTransactions(cloud.data);
 }

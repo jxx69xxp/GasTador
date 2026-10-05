@@ -4,6 +4,7 @@ import Colors from '../constants/Colors';
 import type { Budget } from '../lib/types';
 import { shadow } from './ui';
 import { themed } from './theme';
+import { CategoryIcon } from './CategoryIcon';
 
 interface Props {
   budget: Budget;
@@ -26,7 +27,7 @@ export function BudgetBar({ budget }: Props) {
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.leftRow}>
-          <Text style={styles.icon}>{budget.category_icon}</Text>
+          <View style={styles.iconWrap}><CategoryIcon emoji={budget.category_icon} size={16} color={budget.category_color ?? Colors.primary} /></View>
           <Text style={styles.name}>{budget.category_name}</Text>
         </View>
         <Text style={[styles.pct, { color: barColor }]}>{pct}%</Text>
@@ -51,7 +52,7 @@ const styles = themed(() => StyleSheet.create({
   card: { backgroundColor: Colors.cardBg, borderRadius: 18, padding: 16, marginTop: 10, ...shadow },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   leftRow: { flexDirection: 'row', alignItems: 'center' },
-  icon: { fontSize: 18, marginRight: 8 },
+  iconWrap: { marginRight: 8 },
   name: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   pct: { fontSize: 13, fontWeight: '700' },
   track: {

@@ -13,6 +13,7 @@ import type {
 } from '../types';
 import type { DbAdapter } from './DbAdapter';
 import { countTransactions, SNAPSHOT_SCHEMA, validateSnapshot, type Snapshot } from './snapshot';
+import { localISO } from '../paydayDates';
 export { countTransactions, SNAPSHOT_SCHEMA, validateSnapshot, type Snapshot };
 
 // ─── Storage ─────────────────────────────────────────────────────────────────
@@ -48,7 +49,7 @@ function nextId(items: { id: number }[]): number {
 }
 
 function nowISO() { return new Date().toISOString(); }
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function todayStr() { return localISO(); }
 function fmt(n: number) { return Math.round(n * 100) / 100; }
 
 // ─── Seed ─────────────────────────────────────────────────────────────────────

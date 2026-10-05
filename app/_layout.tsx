@@ -52,10 +52,12 @@ function AppScreens() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="mode" />
       <Stack.Screen name="login" />
-      <Stack.Screen
-        name="plan"
-        options={{ ...modalOptions('Plan'), presentation: 'card', headerBackTitle: 'Back', contentStyle: { backgroundColor: Colors.screenBg } }}
-      />
+      <Stack.Screen name="debt" options={{ ...modalOptions('Debt'), presentation: 'card', headerBackTitle: 'Back', contentStyle: { backgroundColor: Colors.screenBg } }} />
+      <Stack.Screen name="budgets" options={{ ...modalOptions('Category budget'), presentation: 'card', headerBackTitle: 'Back', contentStyle: { backgroundColor: Colors.screenBg } }} />
+      <Stack.Screen name="list/[type]" options={{ ...modalOptions('Plan'), presentation: 'card', headerBackTitle: 'Back', contentStyle: { backgroundColor: Colors.screenBg } }} />
+      <Stack.Screen name="chat" options={{ ...modalOptions('Ask Paws'), presentation: 'card', headerBackTitle: 'Back', contentStyle: { backgroundColor: Colors.screenBg } }} />
+      <Stack.Screen name="tags" options={{ ...modalOptions('Tags'), presentation: 'card', headerBackTitle: 'Back', contentStyle: { backgroundColor: Colors.screenBg } }} />
+      <Stack.Screen name="tools" options={{ ...modalOptions('Tools'), presentation: 'card', headerBackTitle: 'Back', contentStyle: { backgroundColor: Colors.screenBg } }} />
       <Stack.Screen
         name="settings"
         options={{ ...modalOptions('Settings'), presentation: 'card', headerBackTitle: 'Home', contentStyle: { backgroundColor: Colors.screenBg } }}

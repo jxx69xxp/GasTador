@@ -4,6 +4,7 @@ import Colors from '../constants/Colors';
 import type { Transaction } from '../lib/types';
 import { AmountText } from './AmountText';
 import { themed } from './theme';
+import { CategoryIcon } from './CategoryIcon';
 
 interface Props {
   txn: Transaction;
@@ -31,9 +32,18 @@ export function TransactionItem({ txn, onLongPress }: Props) {
   );
 
   return (
-    <TouchableOpacity style={styles.row} onLongPress={onLongPress} activeOpacity={0.75}>
+    <TouchableOpacity
+      style={styles.row}
+      onLongPress={onLongPress}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={`${txn.memo || txn.category_name || txn.type}, ${txn.type} ${Math.abs(txn.amount).toLocaleString('en-PH')} pesos, ${txn.account_name ?? ''}, ${txn.date}`}
+      accessibilityHint={onLongPress ? 'Long press to delete' : undefined}
+      accessibilityActions={onLongPress ? [{ name: 'delete', label: 'Delete' }] : undefined}
+      onAccessibilityAction={e => { if (e.nativeEvent.actionName === 'delete') onLongPress?.(); }}
+    >
       <View style={[styles.iconBadge, { backgroundColor: (txn.category_color ?? typeColor) + '22' }]}>
-        <Text style={styles.icon}>{displayIcon}</Text>
+        <CategoryIcon emoji={displayIcon} size={20} color={txn.category_color ?? typeColor} />
       </View>
       <View style={styles.info}>
         <Text style={styles.memo} numberOfLines={1}>

@@ -1,10 +1,12 @@
 /**
- * Paws — Accounts Screen
+ * Paws — Wallet Screen (route: accounts)
  * Net worth, a tip from Paws, and account tiles grouped by type.
  */
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AccountCard } from '../../components/AccountCard';
 import { AmountText } from '../../components/AmountText';
 import { CatTip, EmptyState, PillButton, ScreenHeader, ui } from '../../components/ui';
@@ -34,6 +36,10 @@ export default function AccountsScreen() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [netWorth, setNetWorth] = useState<NetWorth>({ assets: 0, liabilities: 0, net: 0 });
   const [refreshing, setRefreshing] = useState(false);
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+
+  useEffect(() => { AsyncStorage.getItem('paws.walletView').then(v => v === 'list' && setView('list')).catch(() => {}); }, []);
+  const pickView = (v: 'grid' | 'list') => { setView(v); AsyncStorage.setItem('paws.walletView', v).catch(() => {}); };
 
   const load = useCallback(async () => {
     const p = await getActiveProfile(db);
@@ -64,11 +70,11 @@ export default function AccountsScreen() {
   return (
     <View style={ui.screen}>
       <ScreenHeader
-        title="Accounts"
+        title="Wallet"
         subtitle="Your wallets and balances"
         right={
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <PillButton icon="trending-down-outline" label="Plan" onPress={() => router.push('/plan')} />
+            <PillButton icon="trending-down-outline" label="Debt" onPress={() => router.push('/debt')} />
             <PillButton icon="add" label="Add" solid onPress={() => router.push('/modal/add-account')} />
           </View>
         }
@@ -96,6 +102,26 @@ export default function AccountsScreen() {
 
         <CatTip text={accountsTip(accounts, netWorth)} />
 
+        {accounts.length > 0 && (
+          <View style={styles.viewRow}>
+            <Text style={[ui.section, { marginTop: 0 }]}>YOUR WALLETS</Text>
+            <View style={styles.toggle} accessibilityRole="radiogroup">
+              {(['grid', 'list'] as const).map(v => (
+                <TouchableOpacity
+                  key={v}
+                  style={[styles.toggleBtn, view === v && styles.toggleOn]}
+                  onPress={() => pickView(v)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: view === v }}
+                  accessibilityLabel={v === 'grid' ? 'Card view' : 'List view'}
+                >
+                  <Ionicons name={v === 'grid' ? 'grid-outline' : 'list-outline'} size={20} color={view === v ? Colors.onPrimary : Colors.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
         {accounts.length === 0 && <EmptyState icon="wallet-outline" text={'No accounts yet.\nTap “Add” to create your first one.'} />}
 
         {[...groups].map(([type, accs]) => (
@@ -104,11 +130,12 @@ export default function AccountsScreen() {
               <Text style={ui.section}>{(TYPE_LABEL[type] ?? type).toUpperCase()}</Text>
               <Text style={styles.groupTotal}>{peso(accs.reduce((s, a) => s + a.balance, 0))}</Text>
             </View>
-            <View style={styles.grid}>
+            <View style={view === 'grid' ? styles.grid : styles.list}>
               {accs.map(acc => (
                 <AccountCard
                   key={acc.id}
                   account={acc}
+                  list={view === 'list'}
                   onPress={() => router.push({ pathname: '/modal/add-account', params: { id: String(acc.id) } })}
                 />
               ))}
@@ -127,6 +154,11 @@ const styles = themed(() => StyleSheet.create({
   divider: { borderLeftWidth: 1, borderLeftColor: Colors.border, paddingLeft: 14 },
   splitLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
   splitValue: { fontSize: 16, fontWeight: '800', marginTop: 2 },
+  viewRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
+  toggle: { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: 12, padding: 3, borderWidth: 1, borderColor: Colors.border },
+  toggleBtn: { width: 44, height: 40, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  toggleOn: { backgroundColor: Colors.primary },
+  list: { gap: 10 },
   groupHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 },
   groupTotal: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },

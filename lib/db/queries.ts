@@ -12,6 +12,7 @@ import type {
   NetWorth, Profile, Transaction, TransactionType,
 } from '../types';
 import { countTransactions, SNAPSHOT_SCHEMA, validateSnapshot, type Snapshot } from './snapshot';
+import { localISO } from '../paydayDates';
 export { countTransactions, SNAPSHOT_SCHEMA, validateSnapshot, type Snapshot };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -228,7 +229,7 @@ export async function postTransaction(
       data.type,
       fmt(data.amount),
       data.memo ?? '',
-      data.date ?? new Date().toISOString().slice(0, 10)
+      data.date ?? localISO()
     );
     newId = r.lastInsertRowId;
 

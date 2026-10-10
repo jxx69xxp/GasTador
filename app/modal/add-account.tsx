@@ -38,13 +38,14 @@ const PALETTE = [
 
 export default function AddAccountModal() {
   const db = useDb();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, type: presetType } = useLocalSearchParams<{ id?: string; type?: string }>();
   const editId = id ? Number(id) : null;
+  const preset = ACCOUNT_TYPES.find(t => t.id === presetType) ?? ACCOUNT_TYPES[0]; // ?type= from Plan → Debt
   const [name, setName] = useState('');
-  const [type, setType] = useState<Account['type']>('cash');
+  const [type, setType] = useState<Account['type']>(preset.id);
   const [balance, setBalance] = useState('0');
-  const [color, setColor] = useState(Colors.cash);
-  const [icon, setIcon] = useState('💵');
+  const [color, setColor] = useState(preset.color);
+  const [icon, setIcon] = useState(preset.icon);
   const [saving, setSaving] = useState(false);
 
   // edit mode: prefill from the stored account

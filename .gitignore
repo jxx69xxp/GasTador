@@ -15,3 +15,5 @@ dist/
 !android/app/debug.keystore
 *.jks
 .DS_Store
+.vercel
+.env*

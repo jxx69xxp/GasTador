@@ -5,6 +5,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { upcomingPaydays } from './paydayDates';
 import { localISO } from './paydayDates';
+import { loadPlanList } from './planStore';
 
 const native = Platform.OS !== 'web';
 
@@ -43,6 +44,29 @@ export async function schedulePaydays(days: number[]) {
     await Notifications.scheduleNotificationAsync({
       identifier: `payday-${localISO(date)}`,
       content: { title: 'Payday! 💰', body: 'Sweldo day! Log your salary in Paws and pay yourself first.' },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
+    });
+  }
+}
+
+/** Plan → Reminders: one notification at 9:00 on each future reminder date. Re-run after every edit and on app open. */
+export async function scheduleReminders() {
+  if (!native) return;
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(scheduled.filter(n => n.identifier.startsWith('reminder-'))
+    .map(n => Notifications.cancelScheduledNotificationAsync(n.identifier)));
+  const now = new Date();
+  const due = (await loadPlanList('reminders'))
+    .map(r => ({ r, date: new Date(`${r.date}T09:00:00`) }))
+    .filter(x => x.date > now)
+    .slice(0, 60); // iOS keeps at most 64 pending notifications; paydays + daily use the rest
+  if (!due.length) return;
+  const { granted } = await Notifications.requestPermissionsAsync();
+  if (!granted) return;
+  for (const { r, date } of due) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `reminder-${r.id}`,
+      content: { title: String(r.name), body: String(r.note ?? 'Reminder from Paws') },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
     });
   }

@@ -5,7 +5,7 @@ import { Alert, AppState } from 'react-native';
 import Colors from '../../constants/Colors';
 import { useAuth } from '../../lib/auth';
 import { useDb } from '../../lib/db/DbContext';
-import { schedulePaydays, setupDailyReminder } from '../../lib/notifications';
+import { scheduleReminders, schedulePaydays, setupDailyReminder } from '../../lib/notifications';
 import { backupNow, getCloudBackup, localTransactionCount, restoreFromCloud } from '../../lib/sync';
 import { countTransactions } from '../../lib/db/queries';
 
@@ -28,6 +28,10 @@ export default function TabLayout() {
   useEffect(() => {
     if (allowed) schedulePaydays(paydays).catch(() => {});
   }, [allowed, paydays]);
+
+  useEffect(() => {
+    if (allowed) scheduleReminders().catch(() => {});
+  }, [allowed]);
 
   const db = useDb();
   const online = !!session && !offline;

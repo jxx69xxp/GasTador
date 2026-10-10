@@ -50,6 +50,7 @@ export default function PlanHub() {
     ['trending-down-outline', 'Debt', o.debt ? `${peso(o.debt)} owed · see payoff date` : 'Loans & credit cards payoff plan', '/debt'],
     ['people-outline', 'Money owed to you', o.owed ? `${peso(o.owed)} to collect` : 'Track who owes you', '/list/owed'],
     ['calendar-outline', 'Planned payments', o.planned ? `${peso(o.planned)} every month` : 'Rent, bills, subscriptions', '/list/planned'],
+    ['alarm-outline', 'Reminders', 'Pick any date on the calendar', '/list/reminders'],
     ['airplane-outline', 'Travel', o.trips ? `${o.trips} trip${o.trips === 1 ? '' : 's'} planned` : 'Trip budgets tracked by tag', '/list/trips'],
     ['pricetags-outline', 'Tags', 'Spending by #tag in notes', '/tags'],
     ['construct-outline', 'Tools', 'Savings & loan calculators', '/tools'],

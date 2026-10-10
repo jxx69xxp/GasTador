@@ -26,7 +26,7 @@ import { currentScheme } from '../../constants/Colors';
 import { shadow } from '../../components/ui';
 import { evaluate, formatExpression, hasOperator } from '../../lib/amount';
 import Colors from '../../constants/Colors';
-import { getAccounts, getActiveProfile, getBudgets, getCategories, postTransaction } from '../../lib/db/queries';
+import { getAccounts, getActiveProfile, getBudgets, getCategories, deleteTransaction, postTransaction } from '../../lib/db/queries';
 import { notifyBudget } from '../../lib/notifications';
 import type { Account, Category, TransactionType } from '../../lib/types';
 import { themed } from '../../components/theme';
@@ -49,7 +49,8 @@ const typeOptions = (): { id: TransactionType; label: string; color: string }[] 
 
 export default function AddTransactionModal() {
   const db = useDb();
-  const params = useLocalSearchParams<{ type?: string; amount?: string; memo?: string; category?: string; date?: string }>();
+  const params = useLocalSearchParams<{ type?: string; amount?: string; memo?: string; category?: string; date?: string; edit?: string; account?: string; to?: string }>();
+  const editId = Number(params.edit) || null; // set by swipe/tap Edit on a transaction
   const [type, setType] = useState<TransactionType>(
     params.type === 'income' || params.type === 'transfer' ? params.type : 'expense');
   const [amount, setAmount] = useState(() => (Number(params.amount) > 0 ? String(params.amount) : ''));          // raw calculator expression, e.g. "1200+300"
@@ -59,8 +60,8 @@ export default function AddTransactionModal() {
   const [date, setDate] = useState(() => (params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) && params.date <= localISO() ? params.date : localISO()));
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<number | null>(null);
-  const [selectedToAccount, setSelectedToAccount] = useState<number | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<number | null>(Number(params.account) || null);
+  const [selectedToAccount, setSelectedToAccount] = useState<number | null>(Number(params.to) || null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const insets = useSafeAreaInsets();
@@ -113,6 +114,7 @@ export default function AddTransactionModal() {
     try {
       const p = await getActiveProfile(db);
       if (!p) return;
+      // edit = post the new entry first, then drop the old one, so a failure never loses the transaction
       await postTransaction(db, p.id, {
         account_id: selectedAccount,
         to_account_id: type === 'transfer' ? selectedToAccount : null,
@@ -122,6 +124,7 @@ export default function AddTransactionModal() {
         memo: memo.trim(),
         date,
       });
+      if (editId) await deleteTransaction(db, editId);
       if (type === 'expense' && selectedCategory) {
         const [y, m] = date.split('-').map(Number);
         const b = (await getBudgets(db, p.id, y, m)).find(b => b.category_id === selectedCategory);
@@ -133,7 +136,7 @@ export default function AddTransactionModal() {
     } finally {
       setSaving(false);
     }
-  }, [db, type, amount, memo, date, selectedAccount, selectedToAccount, selectedCategory]);
+  }, [db, editId, type, amount, memo, date, selectedAccount, selectedToAccount, selectedCategory]);
 
   const TYPE_OPTIONS = typeOptions();
   const active = TYPE_OPTIONS.find(o => o.id === type)!;
@@ -278,7 +281,7 @@ export default function AddTransactionModal() {
           disabled={saving}
           accessibilityRole="button"
         >
-          <Text style={styles.saveLabel}>{saving ? 'Saving…' : `Save ${active.label}`}</Text>
+          <Text style={styles.saveLabel}>{saving ? 'Saving…' : `${editId ? 'Update' : 'Save'} ${active.label}`}</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

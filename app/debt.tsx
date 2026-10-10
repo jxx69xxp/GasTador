@@ -4,7 +4,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { themed } from '../components/theme';
@@ -132,8 +132,17 @@ export default function DebtScreen() {
 
         {/* Debts */}
         <Text style={ui.section}>LOANS & CREDIT CARDS</Text>
+        <View style={styles.row}>
+          {([['credit_card', 'Credit card'], ['loan', 'Loan']] as const).map(([type, label]) => (
+            <TouchableOpacity key={type} style={styles.addBtn} accessibilityRole="button" accessibilityLabel={`Add ${label}`}
+              onPress={() => router.push({ pathname: '/modal/add-account', params: { type } })}>
+              <Ionicons name="add" size={18} color={Colors.primary} />
+              <Text style={styles.addText}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
         {debts.length === 0 ? (
-          <EmptyState icon="happy-outline" text={'No loans or credit card balances.\nAdd one under Wallet to plan its payoff.'} />
+          <EmptyState icon="happy-outline" text={'No loans or credit card balances.\nTap + above to add one and plan its payoff.'} />
         ) : debtAccounts.map(a => {
           const d = debts.find(x => x.id === a.id)!;
           const months = monthsToPayoff(d.owed, d.payment, d.apr);
@@ -225,6 +234,11 @@ function Line({ label, value, color }: { label: string; value: string; color?: s
 
 const styles = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
+  addBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 46, borderRadius: 12,
+    borderWidth: 1.5, borderColor: Colors.primary, backgroundColor: Colors.surface,
+  },
+  addText: { color: Colors.primary, fontWeight: '700', fontSize: 14 },
   half: { flex: 1, padding: 14 },
   big: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginTop: 4 },
   sub: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },

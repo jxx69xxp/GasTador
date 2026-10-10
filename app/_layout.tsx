@@ -1,4 +1,3 @@
-import { SQLiteProvider } from 'expo-sqlite';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,6 +11,7 @@ import Colors from '../constants/Colors';
 import { AnimatedSplash } from '../components/AnimatedSplash';
 import { ThemeProvider, useTheme } from '../components/theme';
 import { AuthProvider, useAuth } from '../lib/auth';
+import { InstallPrompt } from '../components/InstallPrompt';
 
 // Keep the native splash up until we know whether to show login or the dashboard (no blank flash);
 // AnimatedSplash then takes over and fades into the app.
@@ -73,6 +73,8 @@ function AppScreens() {
 
 // ── Native: SQLiteProvider → NativeDbProvider → screens ──────────────────────
 function NativeRoot() {
+  // Lazy require: expo-sqlite has no web module and crashes at import time on web.
+  const { SQLiteProvider } = require('expo-sqlite') as typeof import('expo-sqlite');
   return (
     <Suspense fallback={<Loading />}>
       <SQLiteProvider databaseName={DB_NAME} onInit={initDatabase} useSuspense>
@@ -89,6 +91,7 @@ function WebRoot() {
   return (
     <WebDbProvider>
       <AppScreens />
+      <InstallPrompt />
     </WebDbProvider>
   );
 }

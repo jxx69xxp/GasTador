@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@rea
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import React, { Suspense } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { initDatabase, DB_NAME } from '../lib/db/database';
@@ -96,11 +97,13 @@ const Root = Platform.OS === 'web' ? WebRoot : NativeRoot;
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Root />
-        <SplashGate />
-      </AuthProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <Root />
+          <SplashGate />
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

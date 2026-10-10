@@ -229,7 +229,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
           {recent.length === 0
             ? <EmptyState icon="receipt-outline" text={'No transactions yet.\nTap “+ Expense” to log your first one.'} />
-            : recent.map(txn => <TransactionItem key={txn.id} txn={txn} onLongPress={() => handleDeleteTxn(txn)} />)}
+            : recent.map(txn => <TransactionItem key={txn.id} txn={txn} onDelete={() => handleDeleteTxn(txn)} />)}
         </View>
 
         <View style={{ height: 96 }} />

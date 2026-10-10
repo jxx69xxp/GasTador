@@ -3,16 +3,18 @@
  * Fields come from PLAN_LISTS (lib/planMath.ts); tap a card to edit, "+" to add.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { themed } from '../../components/theme';
 import { EmptyState, Fab, ui } from '../../components/ui';
-import Colors from '../../constants/Colors';
+import Colors, { currentScheme } from '../../constants/Colors';
 import { formatAmountInput } from '../../lib/amount';
 import { useDb } from '../../lib/db/DbContext';
 import { getActiveProfile, getTransactionsByDateRange } from '../../lib/db/queries';
 import { cleanItem, isPlanList, nextDue, PLAN_LISTS, tagTotals, type Field, type PlanItem, type PlanListKey } from '../../lib/planMath';
+import { scheduleReminders } from '../../lib/notifications';
 import { usePlanList } from '../../lib/planStore';
 import { localISO } from '../../lib/paydayDates';
 
@@ -23,6 +25,7 @@ const META: Record<PlanListKey, { title: string; icon: keyof typeof Ionicons.gly
   goals: { title: 'Personal Goals', icon: 'trophy-outline', empty: 'Saving for a laptop, a trip, an emergency fund?\nAdd a goal and track it here.', add: 'Goal' },
   owed: { title: 'Money Owed to You', icon: 'people-outline', empty: 'Lent someone money?\nKeep track so it doesn’t slip.', add: 'Debt' },
   planned: { title: 'Planned Payments', icon: 'calendar-outline', empty: 'Rent, bills, subscriptions…\nAdd them to see what’s due.', add: 'Payment' },
+  reminders: { title: 'Reminders', icon: 'alarm-outline', empty: 'Birthdays, deadlines, anything to remember.\nPick a date and Paws will remind you at 9:00.', add: 'Reminder' },
   trips: { title: 'Travel', icon: 'airplane-outline', empty: 'Plan a trip budget, then tag its expenses\n(e.g. #boracay in the note) to track spend.', add: 'Trip' },
 };
 
@@ -34,6 +37,7 @@ export default function PlanListScreen() {
   const [editing, setEditing] = useState<PlanItem | 'new' | null>(null);
   const [form, setForm] = useState<Record<string, string | boolean>>({});
   const [tagSpend, setTagSpend] = useState(new Map<string, { spent: number; count: number }>());
+  const [pickDate, setPickDate] = useState<string | null>(null); // field key whose calendar is open
   const db = useDb();
 
   // trips: spend per tag over the last year
@@ -58,6 +62,7 @@ export default function PlanListScreen() {
     const result = cleanItem(list, form, id);
     if (typeof result === 'string') { Alert.alert('Check this field', result); return; }
     await save(result);
+    if (list === 'reminders') scheduleReminders().catch(() => {});
     setEditing(null);
   };
 
@@ -65,7 +70,7 @@ export default function PlanListScreen() {
     if (!editing || editing === 'new') return;
     Alert.alert('Delete?', `Remove “${editing.name ?? editing.person}”?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await remove(editing.id); setEditing(null); } },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await remove(editing.id); if (list === 'reminders') scheduleReminders().catch(() => {}); setEditing(null); } },
     ]);
   };
 
@@ -84,8 +89,9 @@ export default function PlanListScreen() {
               ) : (
                 <>
                   <Text style={styles.label}>{f.label}{f.required ? ' *' : ''}</Text>
+                  <View style={f.kind === 'date' ? styles.dateRow : undefined}>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, f.kind === 'date' && { flex: 1 }]}
                     value={String(form[f.key] ?? '')}
                     onChangeText={v => setForm(prev => ({ ...prev, [f.key]: f.kind === 'number' ? formatAmountInput(v) : v }))}
                     keyboardType={f.kind === 'number' ? 'decimal-pad' : f.kind === 'day' ? 'number-pad' : 'default'}
@@ -93,6 +99,24 @@ export default function PlanListScreen() {
                     placeholderTextColor={Colors.textMuted}
                     accessibilityLabel={f.label}
                   />
+                  {f.kind === 'date' && (
+                    <TouchableOpacity style={styles.calBtn} onPress={() => setPickDate(pickDate === f.key ? null : f.key)} accessibilityRole="button" accessibilityLabel={`Pick ${f.label} from calendar`}>
+                      <Ionicons name="calendar-outline" size={22} color={Colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                  </View>
+                  {pickDate === f.key && (
+                    <DateTimePicker
+                      value={/^\d{4}-\d{2}-\d{2}$/.test(String(form[f.key])) ? new Date(`${form[f.key]}T12:00:00`) : new Date()}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                      themeVariant={currentScheme()}
+                      onChange={(e, d) => {
+                        if (Platform.OS === 'android') setPickDate(null); // Android's dialog closes itself
+                        if (e.type === 'set' && d) setForm(prev => ({ ...prev, [f.key]: localISO(d) }));
+                      }}
+                    />
+                  )}
                 </>
               )}
             </View>
@@ -119,7 +143,7 @@ export default function PlanListScreen() {
       <ScrollView contentContainerStyle={[ui.scroll, { paddingTop: 4 }]}>
         <Summary list={list} items={items} />
         {items.length === 0 && <EmptyState icon={meta.icon} text={meta.empty} />}
-        {items.map(it => {
+        {(list === 'reminders' ? [...items].sort((a, b) => String(a.date).localeCompare(String(b.date))) : items).map(it => {
           const row = describe(list, it, tagSpend);
           return (
             <TouchableOpacity key={it.id} style={ui.card} onPress={() => open(it)} accessibilityRole="button" activeOpacity={0.85}>
@@ -159,6 +183,8 @@ function describe(list: PlanListKey, it: PlanItem, tagSpend: Map<string, { spent
       const days = Math.round((due.getTime() - new Date(new Date().toDateString()).getTime()) / 864e5);
       return { title: String(it.name), value: peso(it.amount), sub: `Every month on the ${it.day} · next ${shortDate(due)}${days === 0 ? ' (today)' : ` (in ${days} days)`}`, progress: null, warn: days <= 2 };
     }
+    case 'reminders':
+      return { title: String(it.name), value: String(it.date), sub: String(it.note ?? ''), progress: null, warn: String(it.date) < localISO() };
     case 'trips': {
       const spent = tagSpend.get(String(it.tag))?.spent ?? 0, budget = Number(it.budget) || 0;
       const dates = [it.start, it.end].filter(Boolean).join(' → ');
@@ -173,6 +199,7 @@ function Summary({ list, items }: { list: PlanListKey; items: PlanItem[] }) {
     goals: `${peso(sum('saved'))} saved of ${peso(sum('target'))}`,
     owed: `${peso(sum('amount', i => !i.settled))} still owed to you`,
     planned: `${peso(sum('amount'))} in planned payments each month`,
+    reminders: `${items.filter(i => String(i.date) >= localISO()).length} upcoming`,
     trips: `${peso(sum('budget'))} budgeted across ${items.length} trip${items.length === 1 ? '' : 's'}`,
   }[list];
   return items.length ? <View style={ui.tintCard}><Text style={styles.summary}>{line}</Text></View> : null;
@@ -185,6 +212,8 @@ const styles = themed(() => StyleSheet.create({
     backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 14, minHeight: 48,
     fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border,
   },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  calBtn: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryBg },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 48 },
   save: { marginTop: 24, minHeight: 52, borderRadius: 14, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   saveText: { color: Colors.onPrimary, fontSize: 16, fontWeight: '800' },

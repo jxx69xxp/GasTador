@@ -27,6 +27,11 @@ export const PLAN_LISTS = {
     { key: 'amount', label: 'Amount (₱)', kind: 'number', required: true },
     { key: 'day', label: 'Day of month (1–31)', kind: 'day', required: true },
   ],
+  reminders: [
+    { key: 'name', label: 'Reminder', kind: 'text', required: true },
+    { key: 'date', label: 'Date (YYYY-MM-DD)', kind: 'date', required: true },
+    { key: 'note', label: 'Note', kind: 'text' },
+  ],
   trips: [
     { key: 'name', label: 'Trip', kind: 'text', required: true },
     { key: 'budget', label: 'Budget (₱)', kind: 'number', required: true },

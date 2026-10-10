@@ -85,7 +85,7 @@ export default function HistoryScreen() {
           [...byDate].map(([date, txns]) => (
             <View key={date} style={[ui.card, { paddingVertical: 6 }]}>
               <DateHeader date={date} txns={txns} />
-              {txns.map(txn => <TransactionItem key={txn.id} txn={txn} onLongPress={() => handleDelete(txn)} />)}
+              {txns.map(txn => <TransactionItem key={txn.id} txn={txn} onDelete={() => handleDelete(txn)} />)}
             </View>
           ))
         )}

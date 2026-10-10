@@ -37,3 +37,8 @@ assert.throws(() => validatePlanLists({ goals: [{ id: '1', evil: 'x' }] }), /unk
 assert.throws(() => validatePlanLists({ goals: [{ id: '1', name: { $gt: '' } }] }), /invalid/);
 assert.throws(() => validatePlanLists({ goals: [{ name: 'no id' }] }), /invalid/);
 console.log('plan ok');
+
+// reminders: name + a real date are required
+assert.strictEqual(typeof cleanItem('reminders', { name: 'Rent', date: '' }, '1'), 'string');
+assert.strictEqual(typeof cleanItem('reminders', { name: 'Rent', date: '2026-13-45' }, '1'), 'string');
+assert.deepStrictEqual(cleanItem('reminders', { name: 'Rent', date: '2026-11-01' }, '1'), { id: '1', name: 'Rent', date: '2026-11-01', note: null });

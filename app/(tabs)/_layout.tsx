@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Alert, AppState } from 'react-native';
+import { Alert, AppState, Platform } from 'react-native';
 import Colors from '../../constants/Colors';
 import { useAuth } from '../../lib/auth';
 import { useDb } from '../../lib/db/DbContext';
@@ -68,9 +68,12 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: Colors.surface,
           borderTopColor: Colors.border,
+          // web's default 49px bar squeezes the label and clips descenders; native sizes itself around the safe area
+          ...(Platform.OS === 'web' && { height: 60, paddingTop: 4 }),
         },
         tabBarLabelStyle: {
           fontSize: 11,
+          lineHeight: 14,
           fontWeight: '600',
         },
         headerShown: false, // every tab draws its own ScreenHeader (components/ui.tsx)

@@ -9,7 +9,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { currentScheme, Scheme, setScheme } from '../constants/Colors';
 
 export type ThemePref = 'system' | 'light' | 'dark';
@@ -29,6 +29,10 @@ const ThemeContext = createContext<{ pref: ThemePref; scheme: Scheme; setPref: (
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme() === 'dark' ? 'dark' : 'light';
   const [pref, setPrefState] = useState<ThemePref>('system');
+  // Web pages are prerendered in light mode and React hydration keeps the server's style classes, so a
+  // dark-mode visitor got light leftovers (e.g. gutters around the centered page). Remount once after hydration.
+  const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
+  useEffect(() => { setHydrated(true); }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(KEY).then(v => { if (v === 'light' || v === 'dark' || v === 'system') setPrefState(v); }).catch(() => {});
@@ -44,7 +48,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ pref, scheme, setPref }}>
-      <React.Fragment key={scheme}>{children}</React.Fragment>
+      <React.Fragment key={`${scheme}-${hydrated}`}>{children}</React.Fragment>
     </ThemeContext.Provider>
   );
 }

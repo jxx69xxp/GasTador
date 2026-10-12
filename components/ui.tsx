@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useRef } from 'react';
 import { router, type Href } from 'expo-router';
 import { scanReceipt } from '../lib/scan';
-import { AccessibilityInfo, Alert, Animated, Easing, ImageStyle, Modal, Pressable, StyleProp, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AccessibilityInfo, Alert, Animated, Easing, ImageStyle, Modal, Platform, Pressable, StyleProp, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '../constants/Colors';
 import { themed } from './theme';
@@ -22,6 +22,16 @@ export function mix(hex: string, base: string, amount: number) {
 export const shadow = {
   shadowColor: '#0F172A', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2,
 };
+
+/** Desktop-width browser: sidebar nav + centered page instead of the phone layout. */
+export function useWideWeb() {
+  const { width } = useWindowDimensions();
+  return Platform.OS === 'web' && width >= 900;
+}
+
+/** Centered, readable content column for wide web screens. */
+export const page = { width: '100%', maxWidth: 760, alignSelf: 'center' } as const;
+export const SIDEBAR_WIDTH = 240;
 
 export function ScreenHeader({ title, subtitle, right }: { title: string; subtitle?: string; right?: React.ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -113,6 +123,7 @@ const ADD_OPTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; href?:
 /** "+" button that opens Chat / Scan / Transfer / Income / Expense. */
 export function AddMenu() {
   const [open, setOpen] = React.useState(false);
+  const wide = useWideWeb();
   const go = (o: (typeof ADD_OPTIONS)[number]) => {
     setOpen(false);
     if (o.href) { router.push(o.href); return; }
@@ -136,8 +147,9 @@ export function AddMenu() {
         <Text style={styles.fabLabel}>Add</Text>
       </TouchableOpacity>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel="Close menu">
-          <View style={styles.menu}>
+        <Pressable style={[styles.backdrop, wide && { paddingLeft: SIDEBAR_WIDTH + 18 }]} onPress={() => setOpen(false)} accessibilityLabel="Close menu">
+          {/* wide web: line the menu up with the FAB at the page column's edge; no bottom tab bar to clear */}
+          <View style={[styles.menu, wide && { width: '100%', maxWidth: page.maxWidth - 36, alignSelf: 'center', marginBottom: 0 }]}>
             {ADD_OPTIONS.map(o => (
               <TouchableOpacity key={o.label} style={styles.menuItem} onPress={() => go(o)} accessibilityRole="button">
                 <Text style={styles.menuLabel}>{o.label}</Text>

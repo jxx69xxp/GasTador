@@ -164,15 +164,12 @@ export default function DashboardScreen() {
 
         {/* ── Payday ── */}
         <TouchableOpacity style={styles.paydayCard} onPress={() => router.push('/settings')} accessibilityRole="button">
-          <View style={styles.monthIcon}>
-            <Ionicons name="cash-outline" size={20} color={Colors.income} />
-          </View>
           {payday ? (
             <>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.cardLabel, { color: Colors.income }]}>DAYS UNTIL PAYDAY</Text>
                 <Text style={styles.paydayDays}>
-                  {payday.days === 0 ? 'Payday today! 🎉' : `${payday.days} day${payday.days === 1 ? '' : 's'}`}
+                  {payday.days === 0 ? 'Payday today!' : `${payday.days} day${payday.days === 1 ? '' : 's'}`}
                 </Text>
               </View>
               <Text style={styles.paydayDate}>{payday.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
@@ -190,9 +187,6 @@ export default function DashboardScreen() {
 
         {/* ── Projection ── */}
         <TouchableOpacity style={styles.monthCard} onPress={() => router.push('/debt')} accessibilityRole="button" accessibilityHint="Opens your spending and debt plan">
-          <View style={styles.monthIcon}>
-            <Ionicons name="trending-up-outline" size={20} color={Colors.primary} />
-          </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.cardLabel, { color: Colors.primary }]}>PROJECTED SPENDING THIS MONTH</Text>
             <AmountText amount={monthEndProjection(month.expenses, now.getDate(), new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())} style={styles.monthAmount} />
@@ -202,9 +196,6 @@ export default function DashboardScreen() {
 
         {/* ── Month balance ── */}
         <TouchableOpacity style={styles.monthCard} onPress={() => router.push('/budgets')} accessibilityRole="button">
-          <View style={styles.monthIcon}>
-            <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
-          </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.cardLabel, { color: Colors.primary }]}>LEFT THIS {now.toLocaleString('en-US', { month: 'long' }).toUpperCase()}</Text>
             <AmountText amount={month.net} colorCoded style={styles.monthAmount} />
@@ -218,9 +209,6 @@ export default function DashboardScreen() {
         {/* ── Recent activity ── */}
         <View style={styles.listCard}>
           <TouchableOpacity style={styles.listHeader} onPress={() => router.push('/(tabs)/transactions')} accessibilityRole="button" accessibilityLabel="Recent activity. See all">
-            <View style={styles.monthIcon}>
-              <Ionicons name="receipt-outline" size={20} color={Colors.primary} />
-            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.listTitle}>Recent activity</Text>
               <Text style={styles.listSub}>Your latest income and expenses</Text>
@@ -288,9 +276,6 @@ const styles = themed(() => StyleSheet.create({
   monthCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, padding: 14, borderRadius: 18,
     backgroundColor: Colors.primaryBg, borderWidth: 1, borderColor: Colors.primaryLight + '40',
-  },
-  monthIcon: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center',
   },
   monthAmount: { fontSize: 20, fontWeight: '800', marginTop: 2 },
   small: { fontSize: 13, fontWeight: '700' },

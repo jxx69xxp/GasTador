@@ -102,7 +102,7 @@ export default function AddBudgetModal() {
         />
 
         <Text style={styles.hint}>
-          💡 Long-press any budget card on the Budgets tab to remove it.
+          Long-press any budget card on the Budgets tab to remove it.
         </Text>
 
         {/* Save */}

@@ -27,7 +27,7 @@ const ACCOUNT_TYPES: { id: Account['type']; label: string; icon: string; color: 
   { id: 'cash',        label: 'Cash',        icon: '💵', color: Colors.cash },
   { id: 'bank',        label: 'Bank',        icon: '🏦', color: Colors.bank },
   { id: 'credit_card', label: 'Credit Card', icon: '💳', color: Colors.credit_card },
-  { id: 'loan',        label: 'Loan',        icon: '🏦', color: Colors.loan },
+  { id: 'loan',        label: 'Loan',        icon: '📉', color: Colors.loan },
   { id: 'investment',  label: 'Investment',  icon: '📈', color: Colors.investment },
 ];
 

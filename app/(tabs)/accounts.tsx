@@ -126,10 +126,11 @@ export default function AccountsScreen() {
 
         {[...groups].map(([type, accs]) => (
           <View key={type}>
-            <View style={styles.groupHeader}>
-              <Text style={ui.section}>{(TYPE_LABEL[type] ?? type).toUpperCase()}</Text>
-              <Text style={styles.groupTotal}>{peso(accs.reduce((s, a) => s + a.balance, 0))}</Text>
-            </View>
+            {/* total sits with its label, and only when it adds something (a lone account's card already shows it) */}
+            <Text style={[ui.section, styles.groupHeader]}>
+              {(TYPE_LABEL[type] ?? type).toUpperCase()}
+              {accs.length > 1 && `  ·  ${peso(accs.reduce((s, a) => s + a.balance, 0))}`}
+            </Text>
             <View style={view === 'grid' ? styles.grid : styles.list}>
               {accs.map(acc => (
                 <AccountCard
@@ -159,7 +160,6 @@ const styles = themed(() => StyleSheet.create({
   toggleBtn: { width: 44, height: 40, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   toggleOn: { backgroundColor: Colors.primary },
   list: { gap: 10 },
-  groupHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 },
-  groupTotal: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
+  groupHeader: { marginBottom: 10 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
 }));

@@ -215,15 +215,15 @@ export default function DashboardScreen() {
 
         {/* ── Recent activity ── */}
         <View style={styles.listCard}>
-          <TouchableOpacity style={styles.listHeader} onPress={() => router.push('/(tabs)/transactions')} accessibilityRole="button" accessibilityLabel="Recent activity. See all">
+          <TouchableOpacity style={styles.listHeader} onPress={() => router.push('/(tabs)/transactions')} disabled={recent.length === 0} accessibilityRole={recent.length ? 'button' : 'header'} accessibilityLabel={recent.length ? 'Recent activity. See all' : 'Recent activity'}>
             <View style={{ flex: 1 }}>
               <Text style={styles.listTitle}>Recent activity</Text>
               <Text style={styles.listSub}>Your latest income and expenses</Text>
             </View>
-            <Text style={styles.seeAll}>See all</Text>
+            {recent.length > 0 && <Text style={styles.seeAll}>See all</Text>}
           </TouchableOpacity>
           {recent.length === 0
-            ? <EmptyState icon="receipt-outline" text={'No transactions yet.\nTap “+ Expense” to log your first one.'} />
+            ? <EmptyState text={'No transactions yet.\nTap “Add” to log your first one.'} />
             : recent.map(txn => <TransactionItem key={txn.id} txn={txn} onDelete={() => handleDeleteTxn(txn)} />)}
         </View>
 

@@ -168,10 +168,11 @@ export function AddMenu() {
   );
 }
 
-export function EmptyState({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+/** Empty-list message. Skip the icon inside a card whose header already names the list. */
+export function EmptyState({ icon, text }: { icon?: keyof typeof Ionicons.glyphMap; text: string }) {
   return (
     <View style={styles.empty}>
-      <Ionicons name={icon} size={40} color={Colors.primaryLight} />
+      {icon && <Ionicons name={icon} size={40} color={Colors.primaryLight} />}
       <Text style={styles.emptyText}>{text}</Text>
     </View>
   );

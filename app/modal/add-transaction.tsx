@@ -32,6 +32,7 @@ import type { Account, Category, TransactionType } from '../../lib/types';
 import { themed } from '../../components/theme';
 import { localISO } from '../../lib/paydayDates';
 import { CategoryIcon } from '../../components/CategoryIcon';
+import { AccountIcon } from '../../components/AccountIcon';
 
 
 // a function so the colors follow the active theme
@@ -304,7 +305,7 @@ function AccountChips({ accounts, selected, onSelect }: {
             accessibilityState={{ selected: on }}
           >
             <View style={[styles.chipIcon, { backgroundColor: acc.color + '26' }]}>
-              <CategoryIcon emoji={acc.icon} size={16} color={acc.color} />
+              <AccountIcon name={acc.name} icon={acc.icon} size={16} box={30} color={acc.color} />
             </View>
             <Text style={styles.chipLabel}>{acc.name}</Text>
           </TouchableOpacity>

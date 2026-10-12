@@ -5,7 +5,7 @@ import type { Account } from '../lib/types';
 import { AmountText } from './AmountText';
 import { mix, shadow } from './ui';
 import { themed } from './theme';
-import { CategoryIcon } from './CategoryIcon';
+import { AccountIcon } from './AccountIcon';
 
 interface Props {
   account: Account;
@@ -25,7 +25,7 @@ export function AccountCard({ account, onPress, list }: Props) {
       accessibilityLabel={`${account.name}, balance ₱${account.balance.toFixed(2)}`}
     >
       <View style={[styles.badge, { backgroundColor: account.color }]}>
-        <CategoryIcon emoji={account.icon} size={20} color="#FFFFFF" />
+        <AccountIcon name={account.name} icon={account.icon} size={20} box={40} color="#FFFFFF" />
       </View>
       <Text style={[styles.name, list && { flex: 1, fontSize: 15 }]} numberOfLines={1}>{account.name}</Text>
       <AmountText amount={debt ? -Math.abs(account.balance) : account.balance} colorCoded={debt || account.balance < 0} style={[styles.balance, list && { fontSize: 16 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} />

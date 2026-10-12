@@ -223,7 +223,10 @@ export default function DashboardScreen() {
             {recent.length > 0 && <Text style={styles.seeAll}>See all</Text>}
           </TouchableOpacity>
           {recent.length === 0
-            ? <EmptyState text={'No transactions yet.\nTap “Add” to log your first one.'} />
+            ? <EmptyState
+                text="No transactions yet."
+                action={{ label: 'Log an expense', onPress: () => router.push({ pathname: '/modal/add-transaction', params: { type: 'expense' } }) }}
+              />
             : recent.map(txn => <TransactionItem key={txn.id} txn={txn} onDelete={() => handleDeleteTxn(txn)} />)}
         </View>
 

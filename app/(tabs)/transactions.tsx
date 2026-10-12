@@ -59,7 +59,7 @@ export default function HistoryScreen() {
     <View style={ui.screen}>
       <ScreenHeader title="History" subtitle="Every income, expense and transfer" />
       <ScrollView
-        contentContainerStyle={ui.scroll}
+        contentContainerStyle={[ui.scroll, { flexGrow: 1 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
@@ -80,7 +80,9 @@ export default function HistoryScreen() {
 
         {/* History */}
         {byDate.size === 0 ? (
-          <EmptyState icon="receipt-outline" text="No transactions found." />
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <EmptyState icon="receipt-outline" text="No transactions found." />
+          </View>
         ) : (
           [...byDate].map(([date, txns]) => (
             <View key={date} style={[ui.card, { paddingVertical: 6 }]}>

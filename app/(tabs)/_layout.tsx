@@ -91,7 +91,8 @@ export default function TabLayout() {
       <Tabs.Screen name="accounts" options={{ title: 'Wallet', tabBarLabel: 'Wallet', tabBarIcon: tabIcon('wallet') }} />
       <Tabs.Screen name="plan" options={{ title: 'Plan', tabBarLabel: 'Plan', tabBarIcon: tabIcon('clipboard') }} />
       <Tabs.Screen name="insights" options={{ title: 'Insights', tabBarLabel: 'Insights', tabBarIcon: tabIcon('stats-chart') }} />
-      <Tabs.Screen name="transactions" options={{ title: 'History', tabBarLabel: 'History', tabBarIcon: tabIcon('time') }} />
+      {/* not a tab: reached from Home's Recent activity → See all */}
+      <Tabs.Screen name="transactions" options={{ title: 'History', href: null }} />
     </Tabs>
   );
 }

@@ -168,11 +168,20 @@ export function AddMenu() {
   );
 }
 
-export function EmptyState({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+/** Empty-list message. Skip the icon inside a card whose header already names the list; pass `action`
+ * for a direct button instead of text telling people which button to find. */
+export function EmptyState({ icon, text, action }: {
+  icon?: keyof typeof Ionicons.glyphMap; text: string; action?: { label: string; onPress: () => void };
+}) {
   return (
     <View style={styles.empty}>
-      <Ionicons name={icon} size={40} color={Colors.primaryLight} />
+      {icon && <Ionicons name={icon} size={40} color={Colors.primaryLight} />}
       <Text style={styles.emptyText}>{text}</Text>
+      {action && (
+        <TouchableOpacity style={styles.emptyAction} onPress={action.onPress} accessibilityRole="button">
+          <Text style={styles.emptyActionText}>{action.label}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -228,4 +237,6 @@ const styles = themed(() => StyleSheet.create({
 
   empty: { alignItems: 'center', paddingVertical: 36, gap: 10 },
   emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  emptyAction: { minHeight: 44, paddingHorizontal: 20, borderRadius: 22, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  emptyActionText: { color: Colors.onPrimary, fontSize: 15, fontWeight: '700' },
 }));

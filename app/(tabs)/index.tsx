@@ -200,23 +200,33 @@ export default function DashboardScreen() {
             <Text style={[styles.cardLabel, { color: Colors.primary }]}>LEFT THIS {now.toLocaleString('en-US', { month: 'long' }).toUpperCase()}</Text>
             <AmountText amount={month.net} colorCoded style={styles.monthAmount} />
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <AmountText amount={month.income} style={[styles.small, { color: Colors.income }]} />
-            <AmountText amount={-month.expenses} style={[styles.small, { color: Colors.expense }]} />
+          {/* labelled, not color-only: green/red alone doesn't say which is which (or anything, if colorblind) */}
+          <View style={{ gap: 2 }}>
+            <View style={styles.inOut}>
+              <Text style={styles.inOutLabel}>In</Text>
+              <AmountText amount={month.income} style={[styles.small, { color: Colors.income }]} />
+            </View>
+            <View style={styles.inOut}>
+              <Text style={styles.inOutLabel}>Out</Text>
+              <AmountText amount={month.expenses} style={[styles.small, { color: Colors.expense }]} />
+            </View>
           </View>
         </TouchableOpacity>
 
         {/* ── Recent activity ── */}
         <View style={styles.listCard}>
-          <TouchableOpacity style={styles.listHeader} onPress={() => router.push('/(tabs)/transactions')} accessibilityRole="button" accessibilityLabel="Recent activity. See all">
+          <TouchableOpacity style={styles.listHeader} onPress={() => router.push('/(tabs)/transactions')} disabled={recent.length === 0} accessibilityRole={recent.length ? 'button' : 'header'} accessibilityLabel={recent.length ? 'Recent activity. See all' : 'Recent activity'}>
             <View style={{ flex: 1 }}>
               <Text style={styles.listTitle}>Recent activity</Text>
               <Text style={styles.listSub}>Your latest income and expenses</Text>
             </View>
-            <Text style={styles.seeAll}>See all</Text>
+            {recent.length > 0 && <Text style={styles.seeAll}>See all</Text>}
           </TouchableOpacity>
           {recent.length === 0
-            ? <EmptyState icon="receipt-outline" text={'No transactions yet.\nTap “+ Expense” to log your first one.'} />
+            ? <EmptyState
+                text="No transactions yet."
+                action={{ label: 'Log an expense', onPress: () => router.push({ pathname: '/modal/add-transaction', params: { type: 'expense' } }) }}
+              />
             : recent.map(txn => <TransactionItem key={txn.id} txn={txn} onDelete={() => handleDeleteTxn(txn)} />)}
         </View>
 
@@ -279,6 +289,8 @@ const styles = themed(() => StyleSheet.create({
   },
   monthAmount: { fontSize: 20, fontWeight: '800', marginTop: 2 },
   small: { fontSize: 13, fontWeight: '700' },
+  inOut: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'baseline', gap: 8 },
+  inOutLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
 
   listCard: { marginTop: 14, padding: 14, borderRadius: 18, backgroundColor: Colors.surface, ...shadow },
   listHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },

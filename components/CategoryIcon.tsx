@@ -14,7 +14,7 @@ const MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   // income categories
   '💼': 'briefcase', '💻': 'laptop', '🏪': 'storefront', '📈': 'trending-up', '🎁': 'gift', '💰': 'cash',
   // accounts / transaction fallbacks
-  '💵': 'cash', '🏦': 'business', '💳': 'card', '📱': 'phone-portrait', '🔄': 'swap-horizontal', '💸': 'arrow-up-circle',
+  '💵': 'cash', '🏦': 'business', '💳': 'card', '📱': 'phone-portrait', '🔄': 'swap-horizontal', '💸': 'arrow-up-circle', '📉': 'trending-down',
 };
 
 export function CategoryIcon({ emoji, size = 18, color }: { emoji?: string | null; size?: number; color: string }) {

@@ -81,8 +81,8 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Dashboard', tabBarLabel: 'Home', tabBarIcon: tabIcon('home') }} />
       <Tabs.Screen name="accounts" options={{ title: 'Wallet', tabBarLabel: 'Wallet', tabBarIcon: tabIcon('wallet') }} />
-      <Tabs.Screen name="plan" options={{ title: 'Plan', tabBarLabel: 'Plan', tabBarIcon: tabIcon('pie-chart') }} />
-      <Tabs.Screen name="insights" options={{ title: 'Insights', tabBarLabel: 'Insights', tabBarIcon: tabIcon('bar-chart') }} />
+      <Tabs.Screen name="plan" options={{ title: 'Plan', tabBarLabel: 'Plan', tabBarIcon: tabIcon('clipboard') }} />
+      <Tabs.Screen name="insights" options={{ title: 'Insights', tabBarLabel: 'Insights', tabBarIcon: tabIcon('stats-chart') }} />
       <Tabs.Screen name="transactions" options={{ title: 'History', tabBarLabel: 'History', tabBarIcon: tabIcon('time') }} />
     </Tabs>
   );

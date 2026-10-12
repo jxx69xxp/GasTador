@@ -12,7 +12,7 @@ interface Props extends Omit<TextProps, 'style'> {
 export function AmountText({ amount, style, colorCoded = false, currency = '₱', ...rest }: Props) {
   const color = colorCoded
     ? amount >= 0 ? Colors.income : Colors.expense
-    : undefined;
+    : Colors.textPrimary; // never fall back to the platform's black text (unreadable in dark mode)
 
   const formatted = `${currency}${Math.abs(amount).toLocaleString('en-PH', {
     minimumFractionDigits: 2,
@@ -20,7 +20,7 @@ export function AmountText({ amount, style, colorCoded = false, currency = '₱'
   })}`;
 
   return (
-    <Text {...rest} style={[{ fontWeight: '700' }, color ? { color } : null, style]}>
+    <Text {...rest} style={[{ fontWeight: '700', color }, style]}>
       {amount < 0 ? '-' : ''}{formatted}
     </Text>
   );

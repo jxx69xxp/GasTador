@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { Alert, AppState, Platform } from 'react-native';
 import Colors from '../../constants/Colors';
 import { useAuth } from '../../lib/auth';
+import { page, SIDEBAR_WIDTH, useWideWeb } from '../../components/ui';
 import { useDb } from '../../lib/db/DbContext';
 import { scheduleReminders, schedulePaydays, setupDailyReminder } from '../../lib/notifications';
 import { backupNow, getCloudBackup, localTransactionCount, restoreFromCloud } from '../../lib/sync';
@@ -19,6 +20,7 @@ const tabIcon = (name: string) => ({ focused, color, size }: { focused: boolean;
 export default function TabLayout() {
   const { session, offline, ready, paydays } = useAuth();
   const allowed = !!session || !!offline;
+  const wide = useWideWeb();
 
   useEffect(() => {
     if (allowed) setupDailyReminder().catch(() => {});
@@ -65,15 +67,21 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
+        // wide web: labelled sidebar on the left, pages centered at a readable width
+        tabBarPosition: wide ? 'left' : 'bottom',
+        tabBarVariant: wide ? 'material' : 'uikit',
+        sceneStyle: wide ? page : undefined,
         tabBarStyle: {
           backgroundColor: Colors.surface,
           borderTopColor: Colors.border,
+          borderRightColor: Colors.border,
           // web's default 49px bar squeezes the label and clips descenders; native sizes itself around the safe area
-          ...(Platform.OS === 'web' && { height: 60, paddingTop: 4 }),
+          ...(Platform.OS === 'web' && !wide && { height: 60, paddingTop: 4 }),
+          ...(wide && { width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH, paddingTop: 16 }),
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          lineHeight: 14,
+          fontSize: wide ? 15 : 11,
+          lineHeight: wide ? 20 : 14,
           fontWeight: '600',
         },
         headerShown: false, // every tab draws its own ScreenHeader (components/ui.tsx)

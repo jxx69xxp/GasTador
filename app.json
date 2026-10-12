@@ -2,7 +2,7 @@
   "expo": {
     "name": "Paws",
     "slug": "gastador",
-    "version": "1.0.4",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -17,7 +17,7 @@
         "backgroundColor": "#A78BFA"
       },
       "package": "com.gastador.app",
-      "versionCode": 5
+      "versionCode": 7
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -54,6 +54,14 @@
     "experiments": {
       "typedRoutes": true
     },
-    "scheme": "gastador"
+    "scheme": "gastador",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "e187593f-6c0c-475b-a979-af40a62da002"
+      }
+    }
   }
 }

@@ -200,9 +200,16 @@ export default function DashboardScreen() {
             <Text style={[styles.cardLabel, { color: Colors.primary }]}>LEFT THIS {now.toLocaleString('en-US', { month: 'long' }).toUpperCase()}</Text>
             <AmountText amount={month.net} colorCoded style={styles.monthAmount} />
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <AmountText amount={month.income} style={[styles.small, { color: Colors.income }]} />
-            <AmountText amount={-month.expenses} style={[styles.small, { color: Colors.expense }]} />
+          {/* labelled, not color-only: green/red alone doesn't say which is which (or anything, if colorblind) */}
+          <View style={{ gap: 2 }}>
+            <View style={styles.inOut}>
+              <Text style={styles.inOutLabel}>In</Text>
+              <AmountText amount={month.income} style={[styles.small, { color: Colors.income }]} />
+            </View>
+            <View style={styles.inOut}>
+              <Text style={styles.inOutLabel}>Out</Text>
+              <AmountText amount={month.expenses} style={[styles.small, { color: Colors.expense }]} />
+            </View>
           </View>
         </TouchableOpacity>
 
@@ -279,6 +286,8 @@ const styles = themed(() => StyleSheet.create({
   },
   monthAmount: { fontSize: 20, fontWeight: '800', marginTop: 2 },
   small: { fontSize: 13, fontWeight: '700' },
+  inOut: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'baseline', gap: 8 },
+  inOutLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
 
   listCard: { marginTop: 14, padding: 14, borderRadius: 18, backgroundColor: Colors.surface, ...shadow },
   listHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },

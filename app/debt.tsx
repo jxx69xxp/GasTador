@@ -17,7 +17,7 @@ import {
   addMonths, advice, monthEndProjection, monthsToPayoff, payoffPlan, type Debt, type Strategy,
 } from '../lib/projection';
 import { localISO } from '../lib/paydayDates';
-import { CategoryIcon } from '../components/CategoryIcon';
+import { AccountIcon } from '../components/AccountIcon';
 
 const KEY = 'paws.plan';
 type Saved = { salary: string; debts: Record<number, { payment: string; apr: string }> };
@@ -149,7 +149,7 @@ export default function DebtScreen() {
           return (
             <View key={a.id} style={ui.card}>
               <View style={styles.debtHead}>
-                <CategoryIcon emoji={a.icon} size={18} color={Colors.expense} />
+                <AccountIcon name={a.name} icon={a.icon} size={18} box={24} color={Colors.expense} />
                 <Text style={styles.debtName} numberOfLines={1}>{a.name}</Text>
                 <Text style={styles.owed}>{peso(d.owed)}</Text>
               </View>

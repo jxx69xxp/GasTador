@@ -9,7 +9,7 @@ import { BudgetBar } from '../components/BudgetBar';
 import { CatTip, EmptyState, Fab, ui } from '../components/ui';
 import Colors from '../constants/Colors';
 import { useDb } from '../lib/db/DbContext';
-import { deleteBudget, getActiveProfile, getBudgets } from '../lib/db/queries';
+import { deleteBudget, getActiveProfile, getBudgets, getMonthlySummary } from '../lib/db/queries';
 import type { Budget } from '../lib/types';
 import { themed } from '../components/theme';
 
@@ -27,13 +27,19 @@ function budgetTip(budgets: Budget[]) {
 export default function BudgetsScreen() {
   const db = useDb();
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [month, setMonth] = useState({ income: 0, expenses: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const p = await getActiveProfile(db);
     if (!p) return;
     const now = new Date();
-    setBudgets(await getBudgets(db, p.id, now.getFullYear(), now.getMonth() + 1));
+    const [b, m] = await Promise.all([
+      getBudgets(db, p.id, now.getFullYear(), now.getMonth() + 1),
+      getMonthlySummary(db, p.id, now.getFullYear(), now.getMonth() + 1),
+    ]);
+    setBudgets(b);
+    setMonth(m);
   }, [db]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -51,9 +57,10 @@ export default function BudgetsScreen() {
     ]);
   }, [db, load]);
 
-  const total = budgets.reduce((s, b) => s + b.amount, 0);
-  const spent = budgets.reduce((s, b) => s + (b.spent ?? 0), 0);
-  const pct = total > 0 ? Math.min(100, Math.round((spent / total) * 100)) : 0;
+  // the month's income is the budget; spending is everything spent this month, not just budgeted categories
+  const { income, expenses: spent } = month;
+  const left = income - spent;
+  const pct = income > 0 ? Math.min(100, Math.round((spent / income) * 100)) : spent > 0 ? 100 : 0;
   const monthName = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
   return (
@@ -64,14 +71,14 @@ export default function BudgetsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={ui.card}>
-          <Text style={ui.label}>REMAINING IN {monthName.toUpperCase()}</Text>
-          <Text style={styles.big}>{peso(Math.max(0, total - spent))}</Text>
+          <Text style={ui.label}>{left < 0 ? 'OVERSPENT IN' : 'LEFT IN'} {monthName.toUpperCase()}</Text>
+          <Text style={[styles.big, left < 0 && { color: Colors.expense }]}>{peso(Math.abs(left))}</Text>
           <View style={styles.track}>
-            <View style={[styles.fill, { width: `${pct}%`, backgroundColor: spent > total ? Colors.expense : Colors.primary }]} />
+            <View style={[styles.fill, { width: `${pct}%`, backgroundColor: left < 0 ? Colors.expense : Colors.primary }]} />
           </View>
           <View style={styles.split}>
             <Text style={styles.splitText}>{peso(spent)} spent</Text>
-            <Text style={styles.splitText}>of {peso(total)} budget</Text>
+            <Text style={styles.splitText}>of {peso(income)} income</Text>
           </View>
         </View>
 

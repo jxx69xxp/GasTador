@@ -9,7 +9,7 @@ import { BudgetBar } from '../components/BudgetBar';
 import { CatTip, EmptyState, Fab, ui } from '../components/ui';
 import Colors from '../constants/Colors';
 import { useDb } from '../lib/db/DbContext';
-import { deleteBudget, getActiveProfile, getBudgets } from '../lib/db/queries';
+import { deleteBudget, getActiveProfile, getBudgets, getMonthlySummary } from '../lib/db/queries';
 import type { Budget } from '../lib/types';
 import { themed } from '../components/theme';
 
@@ -27,13 +27,19 @@ function budgetTip(budgets: Budget[]) {
 export default function BudgetsScreen() {
   const db = useDb();
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [month, setMonth] = useState({ income: 0, expenses: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const p = await getActiveProfile(db);
     if (!p) return;
     const now = new Date();
-    setBudgets(await getBudgets(db, p.id, now.getFullYear(), now.getMonth() + 1));
+    const [b, m] = await Promise.all([
+      getBudgets(db, p.id, now.getFullYear(), now.getMonth() + 1),
+      getMonthlySummary(db, p.id, now.getFullYear(), now.getMonth() + 1),
+    ]);
+    setBudgets(b);
+    setMonth(m);
   }, [db]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -75,6 +81,18 @@ export default function BudgetsScreen() {
           </View>
         </View>
 
+        {/* the month's money in vs out (all categories), moved here from the Home card that opens this screen */}
+        <View style={[ui.card, styles.inOut]}>
+          <View style={{ flex: 1 }}>
+            <Text style={ui.label}>INCOME</Text>
+            <Text style={[styles.inOutValue, { color: Colors.income }]}>{peso(month.income)}</Text>
+          </View>
+          <View style={[{ flex: 1 }, styles.inOutDivider]}>
+            <Text style={ui.label}>SPENT</Text>
+            <Text style={[styles.inOutValue, { color: Colors.expense }]}>{peso(month.expenses)}</Text>
+          </View>
+        </View>
+
         <CatTip text={budgetTip(budgets)} />
 
         <Text style={ui.section}>CATEGORIES</Text>
@@ -101,6 +119,9 @@ export default function BudgetsScreen() {
 
 const styles = themed(() => StyleSheet.create({
   big: { fontSize: 32, fontWeight: '800', color: Colors.textPrimary, marginTop: 4 },
+  inOut: { flexDirection: 'row' },
+  inOutDivider: { borderLeftWidth: 1, borderLeftColor: Colors.border, paddingLeft: 14 },
+  inOutValue: { fontSize: 20, fontWeight: '800', marginTop: 4 },
   track: { height: 10, borderRadius: 5, backgroundColor: Colors.border, overflow: 'hidden', marginTop: 12 },
   fill: { height: '100%', borderRadius: 5 },
   split: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },

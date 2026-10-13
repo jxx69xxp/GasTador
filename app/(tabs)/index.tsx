@@ -199,17 +199,10 @@ export default function DashboardScreen() {
           <View style={{ flex: 1 }}>
             <Text style={[styles.cardLabel, { color: Colors.primary }]}>LEFT THIS {now.toLocaleString('en-US', { month: 'long' }).toUpperCase()}</Text>
             <AmountText amount={month.net} colorCoded style={styles.monthAmount} />
-          </View>
-          {/* labelled, not color-only: green/red alone doesn't say which is which (or anything, if colorblind) */}
-          <View style={{ gap: 2 }}>
-            <View style={styles.inOut}>
-              <Text style={styles.inOutLabel}>In</Text>
-              <AmountText amount={month.income} style={[styles.small, { color: Colors.income }]} />
-            </View>
-            <View style={styles.inOut}>
-              <Text style={styles.inOutLabel}>Out</Text>
-              <AmountText amount={month.expenses} style={[styles.small, { color: Colors.expense }]} />
-            </View>
+            {/* one line under the total; words carry the meaning, not just green/red */}
+            <Text style={styles.inOut}>
+              <AmountText amount={month.income} style={[styles.small, { color: Colors.income }]} /> in  ·  <AmountText amount={month.expenses} style={[styles.small, { color: Colors.expense }]} /> out
+            </Text>
           </View>
         </TouchableOpacity>
 
@@ -289,8 +282,7 @@ const styles = themed(() => StyleSheet.create({
   },
   monthAmount: { fontSize: 20, fontWeight: '800', marginTop: 2 },
   small: { fontSize: 13, fontWeight: '700' },
-  inOut: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'baseline', gap: 8 },
-  inOutLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  inOut: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginTop: 4 },
 
   listCard: { marginTop: 14, padding: 14, borderRadius: 18, backgroundColor: Colors.surface, ...shadow },
   listHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },

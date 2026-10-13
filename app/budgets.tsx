@@ -57,9 +57,10 @@ export default function BudgetsScreen() {
     ]);
   }, [db, load]);
 
-  const total = budgets.reduce((s, b) => s + b.amount, 0);
-  const spent = budgets.reduce((s, b) => s + (b.spent ?? 0), 0);
-  const pct = total > 0 ? Math.min(100, Math.round((spent / total) * 100)) : 0;
+  // the month's income is the budget; spending is everything spent this month, not just budgeted categories
+  const { income, expenses: spent } = month;
+  const left = income - spent;
+  const pct = income > 0 ? Math.min(100, Math.round((spent / income) * 100)) : spent > 0 ? 100 : 0;
   const monthName = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
   return (
@@ -70,26 +71,14 @@ export default function BudgetsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={ui.card}>
-          <Text style={ui.label}>REMAINING IN {monthName.toUpperCase()}</Text>
-          <Text style={styles.big}>{peso(Math.max(0, total - spent))}</Text>
+          <Text style={ui.label}>{left < 0 ? 'OVERSPENT IN' : 'LEFT IN'} {monthName.toUpperCase()}</Text>
+          <Text style={[styles.big, left < 0 && { color: Colors.expense }]}>{peso(Math.abs(left))}</Text>
           <View style={styles.track}>
-            <View style={[styles.fill, { width: `${pct}%`, backgroundColor: spent > total ? Colors.expense : Colors.primary }]} />
+            <View style={[styles.fill, { width: `${pct}%`, backgroundColor: left < 0 ? Colors.expense : Colors.primary }]} />
           </View>
           <View style={styles.split}>
             <Text style={styles.splitText}>{peso(spent)} spent</Text>
-            <Text style={styles.splitText}>of {peso(total)} budget</Text>
-          </View>
-        </View>
-
-        {/* the month's money in vs out (all categories), moved here from the Home card that opens this screen */}
-        <View style={[ui.card, styles.inOut]}>
-          <View style={{ flex: 1 }}>
-            <Text style={ui.label}>INCOME</Text>
-            <Text style={[styles.inOutValue, { color: Colors.income }]}>{peso(month.income)}</Text>
-          </View>
-          <View style={[{ flex: 1 }, styles.inOutDivider]}>
-            <Text style={ui.label}>SPENT</Text>
-            <Text style={[styles.inOutValue, { color: Colors.expense }]}>{peso(month.expenses)}</Text>
+            <Text style={styles.splitText}>of {peso(income)} income</Text>
           </View>
         </View>
 
@@ -119,9 +108,6 @@ export default function BudgetsScreen() {
 
 const styles = themed(() => StyleSheet.create({
   big: { fontSize: 32, fontWeight: '800', color: Colors.textPrimary, marginTop: 4 },
-  inOut: { flexDirection: 'row' },
-  inOutDivider: { borderLeftWidth: 1, borderLeftColor: Colors.border, paddingLeft: 14 },
-  inOutValue: { fontSize: 20, fontWeight: '800', marginTop: 4 },
   track: { height: 10, borderRadius: 5, backgroundColor: Colors.border, overflow: 'hidden', marginTop: 12 },
   fill: { height: '100%', borderRadius: 5 },
   split: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
